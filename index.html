@@ -1,0 +1,766 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mesa dos Reis</title>
+<meta name="description" content="Ranking comunitário de builds de 9 Kings.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 8' shape-rendering='crispEdges'%3E%3Cpath fill='%23e3b541' d='M0 1h1v1H0zM9 1h1v1H9zM4 0h2v1H4zM0 2h2v4H0zM8 2h2v4H8zM4 1h2v5H4zM2 3h2v3H2zM6 3h2v3H6z'/%3E%3Cpath fill='%23b3861f' d='M0 6h10v2H0z'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap">
+<style>
+:root{
+  color-scheme: dark;
+  --ground:#12141c;
+  --ground-2:#181b26;
+  --panel:#1e2230;
+  --panel-2:#262b3c;
+  --line:#343a50;
+  --ink:#ece6d6;
+  --ink-2:#aaa596;
+  --ink-3:#7d7a70;
+  --gold:#e3b541;
+  --gold-ink:#1b1606;
+  --good:#6cc46a;
+  --bad:#e0605f;
+  --display:"Pixelify Sans", "Courier New", monospace;
+  --body:"Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  --k-nothing:#cbbf95; --k-spells:#8795ff; --k-greed:#e6c13b; --k-blood:#e0505a;
+  --k-nature:#6cc46a; --k-nomads:#e0913f; --k-stone:#a3acb7; --k-progress:#44c6cd; --k-time:#bb84e6;
+}
+*{box-sizing:border-box}
+html,body{background:var(--ground)}
+body{margin:0}
+[hidden]{display:none!important}
+img{max-width:100%}
+body{color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5;padding-inline:16px;padding-block:0 64px;
+  background-image:radial-gradient(circle at 50% -20%, #232a44 0, transparent 55%);}
+.wrap{max-width:1080px;margin:0 auto}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+a{color:var(--gold)}
+h1,h2,h3{font-family:var(--display);font-weight:600;letter-spacing:.01em;text-wrap:balance;margin:0;line-height:1.15}
+.num{font-family:var(--display);font-variant-numeric:tabular-nums}
+
+/* top bar */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:rgba(18,20,28,.92);backdrop-filter:blur(6px);
+  border-bottom:1px solid var(--line);margin-inline:-16px;padding:10px 16px}
+.bar .wrap{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;background:none;border:0;padding:0;color:var(--ink)}
+.crown{width:30px;height:24px;image-rendering:pixelated}
+.brand b{font-family:var(--display);font-size:22px;font-weight:700}
+.brand small{font-size:13px;color:var(--ink-3);display:block;line-height:1}
+.bar .sp{flex:1}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:8px 14px;font-weight:500;display:inline-flex;align-items:center;gap:8px}
+.btn:hover{border-color:var(--ink-3)}
+.btn.primary{background:var(--gold);color:var(--gold-ink);border-color:var(--gold);font-weight:700}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent}
+.btn.danger{border-color:var(--bad);color:var(--bad);background:transparent}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.who{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--ink-2)}
+.who img{width:26px;height:26px;border-radius:50%}
+.who strong{color:var(--ink)}
+
+/* hero */
+.hero{padding-block:36px 20px;display:grid;gap:10px}
+.eyebrow{font-family:var(--display);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.hero h1{font-size:clamp(30px,5vw,46px);max-width:18ch}
+.hero p{margin:0;color:var(--ink-2);max-width:60ch}
+
+.notice{border:1px dashed var(--line);border-radius:8px;padding:12px 14px;color:var(--ink-2);font-size:15px;margin-block:12px}
+
+/* filters */
+.filters{display:grid;gap:12px;margin-block:18px 14px}
+.kings{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--ground-2);border-radius:999px;padding:5px 12px;font-size:15px;display:inline-flex;align-items:center;gap:7px;color:var(--ink-2)}
+.chip .dot{width:9px;height:9px;border-radius:2px;background:var(--kc,var(--ink-3))}
+.chip[aria-pressed="true"]{background:var(--panel-2);color:var(--ink);border-color:var(--kc,var(--gold))}
+.row2{display:flex;gap:10px;flex-wrap:wrap}
+.field{background:var(--ground-2);border:1px solid var(--line);border-radius:6px;padding:9px 12px;min-width:0}
+.row2 .field.search{flex:1 1 240px}
+
+/* ranking list */
+.list{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)}
+.lh,.li{display:grid;grid-template-columns:52px 78px 1fr 150px 120px;gap:14px;align-items:center;padding:12px 16px}
+.lh{font-family:var(--display);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);background:var(--ground-2);border-bottom:1px solid var(--line)}
+.li{border:0;border-bottom:1px solid var(--line);background:transparent;text-align:left;width:100%;color:var(--ink)}
+.li:last-child{border-bottom:0}
+.li:hover{background:var(--panel-2)}
+.rank{font-family:var(--display);font-size:22px;color:var(--ink-3)}
+.li.top .rank{color:var(--gold)}
+.score{font-family:var(--display);font-size:20px;display:flex;align-items:center;gap:6px}
+.score .tri{width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:9px solid var(--good)}
+.score.neg .tri{border-bottom:0;border-top:9px solid var(--bad)}
+.ttl{min-width:0}
+.ttl b{display:block;font-size:18px;font-weight:700;overflow-wrap:anywhere}
+.ttl span{display:block;font-size:14px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kbadge{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink);white-space:nowrap}
+.kbadge i{width:12px;height:12px;border-radius:3px;background:var(--kc);box-shadow:0 0 0 2px rgba(0,0,0,.35) inset}
+.meta{font-size:14px;color:var(--ink-2);line-height:1.3}
+.meta small{display:block;color:var(--ink-3)}
+.tag-ex{font-family:var(--display);font-size:11px;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--ink-3);color:var(--ink-2);border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:2px}
+.empty{padding:36px 16px;text-align:center;color:var(--ink-2)}
+@media (max-width:760px){
+  .lh{display:none}
+  .li{grid-template-columns:40px 1fr auto;grid-template-areas:"rank ttl score" "rank king meta";row-gap:6px}
+  .li .rank{grid-area:rank}.li .ttl{grid-area:ttl}.li .score{grid-area:score;justify-self:end}
+  .li .kcol{grid-area:king}.li .meta{grid-area:meta;text-align:right}
+}
+
+/* build page */
+.back{background:none;border:0;color:var(--ink-2);padding:0;margin-block:22px 10px;font-size:15px}
+.back:hover{color:var(--ink)}
+.bhead{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:start;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.bhead h1{font-size:clamp(28px,4.4vw,40px);overflow-wrap:anywhere}
+.bsub{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin-top:10px;color:var(--ink-2);font-size:15px}
+.voter{display:grid;justify-items:center;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:74px}
+.voter button{background:transparent;border:1px solid transparent;border-radius:6px;width:44px;height:30px;display:grid;place-items:center;color:var(--ink-3)}
+.voter button:hover{border-color:var(--line);color:var(--ink)}
+.voter button[aria-pressed="true"].up{color:var(--good);border-color:var(--good)}
+.voter button[aria-pressed="true"].down{color:var(--bad);border-color:var(--bad)}
+.voter .num{font-size:24px}
+.voter small{font-size:12px;color:var(--ink-3)}
+.bgrid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:28px;margin-top:24px}
+@media (max-width:860px){.bgrid{grid-template-columns:1fr}.bhead{grid-template-columns:1fr}.voter{grid-auto-flow:column;justify-self:start;align-items:center}}
+.sec{display:grid;gap:10px;margin-bottom:26px}
+.sec h2{font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.summary{font-size:19px;color:var(--ink);margin:0;max-width:62ch}
+.guide p{margin:0 0 12px;max-width:66ch;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere}
+.side{display:grid;gap:22px;align-content:start}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+.perks{display:flex;flex-wrap:wrap;gap:6px}
+.perk{border:1px solid var(--line);background:var(--ground-2);border-radius:6px;padding:4px 10px;font-size:15px}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{font-size:13px;border-radius:4px;padding:2px 8px;background:var(--panel-2);color:var(--ink-2)}
+.owner-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* kingdom grid */
+.kgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;background:#0d0f15;border:1px solid var(--line);border-radius:10px;padding:8px;max-width:440px;width:100%}
+.cell{aspect-ratio:1;max-width:100%;border-radius:6px;border:1px dashed #2c3144;background:#161925;display:grid;place-items:center;text-align:center;padding:3px;font-size:12px;line-height:1.1;color:var(--ink-3);position:relative;overflow:hidden}
+.cell.full{border:1px solid var(--kc);background:linear-gradient(180deg, color-mix(in srgb, var(--kc) 26%, #1a1d29), #171a25);color:var(--ink);font-weight:500}
+.cell.full::before{content:"";position:absolute;inset:0 0 auto 0;height:4px;background:var(--kc)}
+.cell.center{outline:2px solid var(--gold);outline-offset:-2px}
+.cell span{overflow-wrap:anywhere;hyphens:auto}
+.cell .lv{position:absolute;bottom:2px;right:4px;font-family:var(--display);font-size:11px;color:var(--gold)}
+button.cell{cursor:pointer}
+button.cell.sel{box-shadow:0 0 0 3px var(--gold)}
+.legend{font-size:13px;color:var(--ink-3)}
+
+/* editor */
+.form{display:grid;gap:18px;margin-top:10px}
+.form label{display:grid;gap:6px;font-weight:500}
+.form label small{font-weight:400;color:var(--ink-3)}
+.form .field{width:100%}
+textarea.field{min-height:180px;resize:vertical;line-height:1.5}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:640px){.two{grid-template-columns:1fr}}
+.editor-grid{display:grid;grid-template-columns:minmax(0,440px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:860px){.editor-grid{grid-template-columns:1fr}}
+.palette{display:grid;gap:12px;max-height:520px;overflow:auto;padding-right:4px}
+.pgroup{display:grid;gap:6px}
+.pgroup h3{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--kc);font-weight:600}
+.pcards{display:flex;flex-wrap:wrap;gap:5px}
+.pcard{border:1px solid var(--line);border-left:4px solid var(--kc);background:var(--ground-2);border-radius:5px;padding:4px 9px;font-size:14px}
+.pcard:hover{background:var(--panel-2)}
+.cellctl{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:15px;color:var(--ink-2)}
+.err{color:var(--bad);font-size:15px}
+.formbar{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;padding-top:8px;border-top:1px solid var(--line)}
+
+/* modal */
+.scrim{position:fixed;inset:0;background:rgba(5,6,10,.7);display:grid;place-items:center;padding:16px;z-index:50}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;max-width:440px;width:100%;display:grid;gap:14px}
+.modal p{margin:0;color:var(--ink-2)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--ground);padding:10px 16px;border-radius:8px;font-weight:500;z-index:60}
+@media (prefers-reduced-motion:no-preference){.li,.btn,.chip{transition:background .12s,border-color .12s}}
+
+/* enchantments */
+.cell.enchanted{box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--gold) 55%, transparent), inset 0 0 14px color-mix(in srgb, var(--gold) 22%, transparent)}
+.ench{position:absolute;top:7px;left:4px;display:flex;align-items:center;gap:2px}
+.ench i,.echip i,.penc i{display:inline-block;width:7px;height:7px;transform:rotate(45deg);background:var(--ec,var(--kc));border:1px solid #0d0f15;flex:none}
+.ench b{font-family:var(--display);font-size:10px;color:var(--gold);margin-left:2px;font-weight:600}
+.enchlist{display:grid;gap:8px;margin-top:6px}
+.enchlist h3{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
+.erow{display:grid;gap:5px;padding:8px 10px;background:var(--panel);border:1px solid var(--line);border-radius:8px}
+.etroop{display:flex;align-items:center;gap:7px;font-weight:700;font-size:15px}
+.etroop i{width:10px;height:10px;border-radius:2px;background:var(--kc)}
+.etroop small{font-weight:400;color:var(--ink-3)}
+.echips{display:flex;flex-wrap:wrap;gap:5px}
+.echip{display:inline-flex;align-items:center;gap:6px;font-size:14px;border:1px solid var(--line);background:var(--ground-2);border-radius:5px;padding:2px 8px}
+.echip b{font-family:var(--display);color:var(--gold);font-weight:600}
+.enchpanel{display:grid;gap:8px;border:1px solid color-mix(in srgb, var(--gold) 45%, var(--line));border-radius:8px;padding:10px 12px;background:var(--panel)}
+.erow2{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.stepper{display:inline-flex;align-items:center;gap:8px}
+.stepper button{width:28px;height:28px;border-radius:5px;border:1px solid var(--line);background:var(--ground-2)}
+.stepper b{min-width:2ch;text-align:center}
+.enchgroup h3{color:var(--gold)}
+.enchgroup h3 small{text-transform:none;letter-spacing:0;color:var(--ink-3);font-weight:400;font-family:var(--body);font-size:13px}
+.penc{border-left-width:1px;display:inline-flex;align-items:center;gap:7px;border-style:dashed;border-color:color-mix(in srgb, var(--gold) 50%, var(--line))}
+.penc[aria-disabled="true"]{opacity:.55}
+.pcard small{display:block;font-size:11px;color:var(--ink-3);line-height:1}
+/* drag */
+.cell.full[data-cell],.pcard{touch-action:none;user-select:none;-webkit-user-select:none}
+.palette .pcard{touch-action:auto}
+@media (hover:hover){.palette .pcard{cursor:grab}.cell.full[data-cell]{cursor:grab}}
+.dragging{opacity:.4}
+.cell.dropover{box-shadow:0 0 0 3px var(--gold);background:color-mix(in srgb, var(--gold) 18%, #161925)}
+.ghost{position:fixed;left:0;top:0;z-index:70;pointer-events:none;padding:6px 12px;border-radius:6px;background:var(--panel-2);border:1px solid var(--kc);border-left:4px solid var(--kc);font-weight:700;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.ghost.isench{border-style:dashed;border-color:var(--gold);color:var(--gold)}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap">
+    <button class="brand" id="homeBtn" aria-label="Ir para o ranking">
+      <svg class="crown" viewBox="0 0 10 8" aria-hidden="true" shape-rendering="crispEdges">
+        <rect x="0" y="1" width="1" height="1" fill="#e3b541"/><rect x="9" y="1" width="1" height="1" fill="#e3b541"/><rect x="4" y="0" width="2" height="1" fill="#e3b541"/>
+        <rect x="0" y="2" width="2" height="4" fill="#e3b541"/><rect x="8" y="2" width="2" height="4" fill="#e3b541"/><rect x="4" y="1" width="2" height="5" fill="#e3b541"/>
+        <rect x="2" y="3" width="2" height="3" fill="#e3b541"/><rect x="6" y="3" width="2" height="3" fill="#e3b541"/><rect x="0" y="6" width="10" height="2" fill="#b3861f"/>
+        <rect x="4" y="3" width="2" height="1" fill="#e0505a"/>
+      </svg>
+      <span><b>Mesa dos Reis</b><small>builds de 9 Kings</small></span>
+    </button>
+    <span class="sp"></span>
+    <div id="authArea" class="who"></div>
+  </div>
+</header>
+
+<main class="wrap" id="app"><p class="notice">Carregando a mesa…</p></main>
+<div id="layer"></div>
+
+<script src="supabase.js"></script>
+<script src="config.js"></script>
+<script>
+/* ---------- Game data (9 Kings) ---------- */
+/* cards by type: base, troop, tower, building, ench (enchantment: stacks on a troop), tome (one-shot, not placed) */
+const KINGS = [
+  {id:"nothing", name:"King of Nothing", pt:"Rei do Nada", color:"var(--k-nothing)",
+   c:{base:["Castle"],troop:["Archer","Paladin","Soldier"],tower:["Scout Tower"],building:["Blacksmith","Farm"],ench:["Steel Coat"],tome:["Wildcard"]},
+   perks:["Agricultural","Berserk","Farsighted","Mauler","Protector","Recruiter","Sentinel","Stubborn","Valiant"]},
+  {id:"spells", name:"King of Spells", pt:"Rei dos Feitiços", color:"var(--k-spells)",
+   c:{base:["Citadel"],troop:["Shaman","Warlock","Wizard"],tower:["Spire"],building:["Library"],ench:["Combustion","Static"],tome:["Offering"]},
+   perks:["Arcane","Eldritch","Electric","Mystic","Ruthless","Scholar","Scrollmaster","Seer","Sorcerous"]},
+  {id:"greed", name:"King of Greed", pt:"Rei da Ganância", color:"var(--k-greed)",
+   c:{base:["Palace"],troop:["Thief","Mercenary"],tower:["Dispenser"],building:["Beacon","Vault"],ench:["Midas Touch","Over-invest"],tome:["Mortgage"]},
+   perks:["Fixer","Goon","Nepobaby","Oligarch","Patron","Peddler","Planner","Smuggler","Tycoon"]},
+  {id:"blood", name:"King of Blood", pt:"Rei do Sangue", color:"var(--k-blood)",
+   c:{base:["Pagoda"],troop:["Bomber","Imp"],tower:["Mangler"],building:["Cemetery","Demon's Altar"],ench:["Carnage"],tome:["Oblation","Sacrifice"]},
+   perks:["Blighted","Butcher","Cultist","Diabolical","Draculian","Explosive","Martyr","Pagan","Summoner"]},
+  {id:"nature", name:"King of Nature", pt:"Rei da Natureza", color:"var(--k-nature)",
+   c:{base:["Treant"],troop:["Boar","Elf"],tower:["Orchard"],building:["Forest","Mycelium"],ench:["Poison Vial"],tome:["Clone","Procreate"]},
+   perks:["Ecofriendly","Elven","Gardener","Healer","Pollinator","Spreader","Tamer","Tenacious","Toxic"]},
+  {id:"nomads", name:"King of Nomads", pt:"Rei dos Nômades", color:"var(--k-nomads)",
+   c:{base:["Warlord"],troop:["Mob","Raptor"],tower:["Dragon's Den"],building:["Camp"],ench:["Frost"],tome:["Migration","Shields","Swords"]},
+   perks:["Aggressive","Cold","Defensive","Immigrant","Jurassic","Khan","Leader","Rebellious","Reptilian"]},
+  {id:"stone", name:"King of Stone", pt:"Rei da Pedra", color:"var(--k-stone)",
+   c:{base:["Stronghold"],troop:["Ballista","Trapper"],tower:["Flamethrower","Trebuchet"],building:["Cauldron","Quarry","Wallmaker"],ench:[],tome:["Earthworks"]},
+   perks:["Ballisteer","Brewer","Hunter","Hurler","Impervious","Incendiary","Sturdy","Tactician","Warden"]},
+  {id:"progress", name:"King of Progress", pt:"Rei do Progresso", color:"var(--k-progress)",
+   c:{base:["Mothership"],troop:["Defender","Executioner","Lab Rat"],tower:["Converter"],building:["Concabulator","Recycler"],ench:["Reinforce"],tome:["Overhaul"]},
+   perks:["Admiral","Armored","Bellicist","Innovator","Mad","Opportunist","Progressive","Ranger","Scientific"]},
+  {id:"time", name:"King of Time", pt:"Rei do Tempo", color:"var(--k-time)",
+   c:{base:["Bastion"],troop:["Warper","Orbiter"],tower:["Hourglass"],building:["Portal","Amplifier"],ench:["Adrenaline","Temp Null"],tome:["Rewind","Regression"]},
+   perks:["Agile","Brutal","Destructive","Exiler","Horologist","Invoker","Manipulative","Physicist","Wise"]},
+];
+const SPECIAL = {id:"special", name:"Cartas especiais", pt:"Especiais", color:"var(--ink-2)",
+  c:{base:[],troop:["Ogre","Golem","Scapegoat","Slime","Replicator"],tower:[],building:["Shrine","Gacha","Temple"],ench:[],tome:[]}, perks:[]};
+const TYPE_PT = {base:"Base",troop:"Tropa",tower:"Torre",building:"Construção",ench:"Encantamento",tome:"Tomo"};
+const PLACEABLE = ["base","troop","tower","building"];
+KINGS.forEach(k=>{ k.base=k.c.base[0]; });
+const KMAP = Object.fromEntries([...KINGS,SPECIAL].map(k=>[k.id,k]));
+const CARD_KING = {}, CARD_TYPE = {};
+[...KINGS,SPECIAL].forEach(k=>Object.entries(k.c).forEach(([t,list])=>list.forEach(c=>{ CARD_KING[c]=k.id; CARD_TYPE[c]=t; })));
+const ALL_ENCH = KINGS.flatMap(k=>k.c.ench.map(c=>({card:c,king:k})));
+const STYLES = ["Economia","Agressiva","Defensiva","Escalável","Iniciante","Speedrun","Alta dificuldade","Sinergia de perks"];
+const GRID = 25, CENTER = 12;
+const kcol = c=>{ const k=KMAP[CARD_KING[c]]; return k?k.color:"var(--ink-3)"; };
+const enchTotal = cell=>(cell&&cell.ench||[]).reduce((s,e)=>s+(e.n||1),0);
+
+/* ---------- State ---------- */
+const S = {
+  sb:null, session:null, me:{id:null}, profile:null,
+  loaded:{builds:false}, dbDown:false,
+  builds:[], myVotes:{},
+  view:"home", buildKey:null, filterKing:"all", q:"", sort:"top",
+  draft:null, selCell:CENTER,
+};
+
+const $ = s=>document.querySelector(s);
+const esc = s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtDate = t=>{ if(!t) return ""; try{return new Date(t).toLocaleDateString("pt-BR",{day:"2-digit",month:"short",year:"numeric"});}catch(e){return ""} };
+function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3200); }
+
+/* ---------- Derived ---------- */
+function allBuilds(){ return S.builds; }
+function rowToBuild(r){
+  return {id:r.id, key:r.id, owner:r.owner, ownerNick:r.owner_nick, example:!r.owner,
+    title:r.title, king:r.king, patch:r.patch||"", summary:r.summary||"", guide:r.guide||"",
+    perks:r.perks||[], tags:r.tags||[], layout:Array.isArray(r.layout)?r.layout:Array(GRID).fill(null),
+    createdAt:Date.parse(r.created_at)||0, updatedAt:Date.parse(r.updated_at)||0,
+    t:{up:r.up||0, down:r.down||0, score:r.score||0}};
+}
+function tally(key){ const b=S.builds.find(x=>x.key===key); return b?b.t:{up:0,down:0,score:0}; }
+function myVote(key){ return S.myVotes[key]||0; }
+function authorName(b){ return b.example ? "Mesa dos Reis" : (b.ownerNick || "Jogador"); }
+function loggedIn(){ return !!(S.me.id && S.profile && S.profile.nick); }
+
+/* ---------- Data ---------- */
+async function loadBuilds(){
+  const {data,error}=await S.sb.from("builds_ranked").select("*").limit(1000);
+  if(error){ console.error(error); S.dbDown=true; }
+  else { S.builds=(data||[]).filter(r=>KMAP[r.king]).map(rowToBuild); S.dbDown=false; }
+  S.loaded.builds=true;
+}
+async function loadMine(){
+  S.profile=null; S.myVotes={};
+  if(!S.me.id) return;
+  const [p,v]=await Promise.all([
+    S.sb.from("profiles").select("nick").eq("id",S.me.id).maybeSingle(),
+    S.sb.from("votes").select("build_id,value").eq("user_id",S.me.id)
+  ]);
+  S.profile=p.data||null;
+  (v.data||[]).forEach(r=>S.myVotes[r.build_id]=r.value);
+  // conta criada com confirmação de e-mail: cria o perfil no primeiro login
+  if(!S.profile){
+    const nick=S.session?.user?.user_metadata?.nick;
+    if(nick){ const {error}=await S.sb.from("profiles").insert({id:S.me.id,nick}); if(!error) S.profile={nick}; }
+  }
+}
+async function refresh(){ await loadBuilds(); if(S.view!=="edit") render(); }
+
+/* ---------- Auth area ---------- */
+function renderAuth(){
+  const a=$("#authArea");
+  if(loggedIn()){
+    a.innerHTML = `<span>Olá, <strong>${esc(S.profile.nick)}</strong></span>
+      <button class="btn primary" id="newBtn">+ Nova build</button><button class="btn ghost" id="outBtn">Sair</button>`;
+    $("#newBtn").onclick=()=>openEditor(null);
+    $("#outBtn").onclick=async()=>{ await S.sb.auth.signOut(); toast("Você saiu."); };
+  } else if(S.me.id){
+    a.innerHTML = `<button class="btn primary" id="nickBtn">Escolher nome de jogador</button><button class="btn ghost" id="outBtn">Sair</button>`;
+    $("#nickBtn").onclick=()=>authModal("nick");
+    $("#outBtn").onclick=async()=>{ await S.sb.auth.signOut(); };
+  } else {
+    a.innerHTML = `<button class="btn ghost" id="inBtn">Entrar</button><button class="btn primary" id="upBtn">Criar conta</button>`;
+    $("#inBtn").onclick=()=>authModal("in"); $("#upBtn").onclick=()=>authModal("up");
+  }
+}
+function login(){ authModal(S.me.id?"nick":"in"); }
+const NICK_RE=/^[A-Za-z0-9_À-ÿ .-]{3,24}$/;
+function authMsg(e){
+  const m=(e&&e.message||"").toLowerCase();
+  if(m.includes("invalid login")) return "E-mail ou senha incorretos.";
+  if(m.includes("email not confirmed")) return "Confirme seu e-mail pelo link que enviamos antes de entrar.";
+  if(m.includes("already registered")) return "Esse e-mail já tem conta. Use Entrar.";
+  if(m.includes("password")) return "A senha precisa ter pelo menos 6 caracteres.";
+  if(m.includes("rate limit")) return "Muitas tentativas. Aguarde alguns minutos.";
+  if(e && e.code==="23505") return "Esse nome de jogador já está em uso. Tente outro.";
+  return "Não foi possível concluir agora. Tente de novo.";
+}
+function authModal(mode){
+  if(!S.sb){ modal(`<h2>Site sem conexão</h2><p>O banco de dados não está configurado. Confira o arquivo config.js.</p><div class="formbar"><button class="btn" data-close>Fechar</button></div>`); return; }
+  const lab=(t,id,type,ph,ac)=>`<label style="display:grid;gap:6px;font-weight:500">${t}<input class="field" id="${id}" type="${type}" placeholder="${ph}" autocomplete="${ac}"></label>`;
+  const body = mode==="up" ? `<h2>Criar conta</h2><p>O nome de jogador aparece nas builds que você publicar.</p>
+      ${lab("Nome de jogador","aNick","text","ex.: ReiDoNada_BR","nickname")}${lab("E-mail","aMail","email","voce@email.com","email")}${lab("Senha","aPass","password","mínimo de 6 caracteres","new-password")}`
+    : mode==="nick" ? `<h2>Escolha seu nome de jogador</h2><p>Ele aparece nas builds que você publicar.</p>${lab("Nome de jogador","aNick","text","ex.: ReiDoNada_BR","nickname")}`
+    : `<h2>Entrar</h2>${lab("E-mail","aMail","email","voce@email.com","email")}${lab("Senha","aPass","password","sua senha","current-password")}`;
+  const alt = mode==="in" ? `<button type="button" class="btn ghost" id="aAlt">Criar conta</button>` : mode==="up" ? `<button type="button" class="btn ghost" id="aAlt">Já tenho conta</button>` : "";
+  modal(`<form id="aForm" style="display:grid;gap:14px" novalidate>${body}<div class="err" id="aErr" hidden></div>
+    <div class="formbar">${alt}<span style="flex:1"></span><button type="button" class="btn ghost" data-close>Cancelar</button><button class="btn primary" id="aGo">${mode==="in"?"Entrar":mode==="up"?"Criar conta":"Salvar"}</button></div></form>`);
+  const alt2=$("#aAlt"); if(alt2) alt2.onclick=()=>authModal(mode==="in"?"up":"in");
+  const f=$("#aForm"); const first=f.querySelector("input"); first&&first.focus();
+  const err=t=>{ const e=$("#aErr"); e.textContent=t; e.hidden=false; };
+  f.onsubmit=async ev=>{
+    ev.preventDefault();
+    const nick=($("#aNick")||{}).value?.trim(), mail=($("#aMail")||{}).value?.trim(), pass=($("#aPass")||{}).value;
+    if(mode!=="in" && !NICK_RE.test(nick||"")) return err("Nome de jogador: 3 a 24 caracteres, sem símbolos especiais.");
+    if(mode!=="nick" && (!mail || !mail.includes("@"))) return err("Informe um e-mail válido.");
+    if(mode==="up" && (pass||"").length<6) return err("A senha precisa ter pelo menos 6 caracteres.");
+    $("#aGo").disabled=true;
+    try{
+      if(mode==="in"){
+        const {error}=await S.sb.auth.signInWithPassword({email:mail,password:pass}); if(error) throw error;
+        closeModal(); toast("Bem-vindo de volta!");
+      } else if(mode==="up"){
+        const {data:taken}=await S.sb.from("profiles").select("id").ilike("nick",nick.replace(/[%_]/g,"\\$&")).maybeSingle();
+        if(taken) throw {code:"23505"};
+        const {data,error}=await S.sb.auth.signUp({email:mail,password:pass,options:{data:{nick},emailRedirectTo:location.origin+location.pathname}});
+        if(error) throw error;
+        if(data.session){ closeModal(); toast("Conta criada. Bem-vindo, "+nick+"!"); }
+        else modal(`<h2>Confirme seu e-mail</h2><p>Enviamos um link para <strong>${esc(mail)}</strong>. Depois de confirmar, volte aqui e clique em Entrar.</p><div class="formbar"><button class="btn primary" data-close>Entendi</button></div>`);
+      } else {
+        const {error}=await S.sb.from("profiles").insert({id:S.me.id,nick}); if(error) throw error;
+        S.profile={nick}; closeModal(); render(); toast("Pronto, "+nick+"!");
+      }
+    }catch(e){ err(authMsg(e)); const b=$("#aGo"); if(b) b.disabled=false; }
+  };
+}
+function writeErr(e){
+  const c=e && e.code;
+  if(c==="42501") return "Você não tem permissão para alterar isso.";
+  if(c==="23514") return "Algum campo está fora do formato aceito.";
+  if(e && /jwt|auth/i.test(e.message||"")) return "Sua sessão expirou. Entre de novo.";
+  return "Não foi possível salvar agora. Tente de novo em instantes.";
+}
+
+/* ---------- Modal ---------- */
+function modal(html){ $("#layer").innerHTML=`<div class="scrim"><div class="modal" role="dialog" aria-modal="true">${html}</div></div>`;
+  $("#layer").querySelectorAll("[data-close]").forEach(b=>b.onclick=closeModal);
+  $("#layer .scrim").onclick=e=>{ if(e.target.classList.contains("scrim")) closeModal(); }; }
+function closeModal(){ $("#layer").innerHTML=""; }
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && $("#layer").innerHTML) closeModal(); });
+
+/* ---------- Navigation ---------- */
+function go(view, key){
+  S.view=view; S.buildKey=key||null;
+  try{ history.replaceState(null,"", view==="build" && key ? "#b-"+key : "#"); }catch(e){}
+  render(); window.scrollTo(0,0);
+}
+$("#homeBtn").onclick=()=>go("home");
+
+/* ---------- Render ---------- */
+function render(){
+  renderAuth();
+  const app=$("#app");
+  if(S.view==="build") return renderBuild(app);
+  if(S.view==="edit") return renderEditor(app);
+  renderHome(app);
+}
+
+function renderHome(app){
+  const ready = S.loaded.builds;
+  let list = allBuilds().slice();
+  if(S.filterKing!=="all") list=list.filter(b=>b.king===S.filterKing);
+  if(S.q){ const q=S.q.toLowerCase(); list=list.filter(b=>(b.title+" "+(b.summary||"")+" "+(b.perks||[]).join(" ")+" "+authorName(b)).toLowerCase().includes(q)); }
+  if(S.sort==="top") list.sort((a,b)=>b.t.score-a.t.score || (b.createdAt||0)-(a.createdAt||0));
+  else list.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  const total=allBuilds().length;
+
+  app.innerHTML = `
+  <section class="hero">
+    <div class="eyebrow">Ranking da comunidade</div>
+    <h1>As builds de 9 Kings que mais seguram a horda</h1>
+  </section>
+  ${S.dbDown?`<div class="notice">Não foi possível carregar as builds agora. Recarregue a página em instantes.</div>`:""}
+  <section class="filters" aria-label="Filtros">
+    <div class="kings" role="group" aria-label="Filtrar por rei">
+      <button class="chip" data-k="all" aria-pressed="${S.filterKing==="all"}">Todos os reis</button>
+      ${KINGS.map(k=>`<button class="chip" style="--kc:${k.color}" data-k="${k.id}" aria-pressed="${S.filterKing===k.id}"><span class="dot"></span>${esc(k.name.replace("King of ","").replace("the ",""))}</button>`).join("")}
+    </div>
+    <div class="row2">
+      <input class="field search" id="q" type="search" placeholder="Buscar por título, perk ou autor" value="${esc(S.q)}" aria-label="Buscar builds">
+      <select class="field" id="sort" aria-label="Ordenar">
+        <option value="top" ${S.sort==="top"?"selected":""}>Mais bem avaliadas</option>
+        <option value="new" ${S.sort==="new"?"selected":""}>Mais recentes</option>
+      </select>
+    </div>
+  </section>
+  <section class="list" aria-label="Builds">
+    <div class="lh"><span>#</span><span>Votos</span><span>Build</span><span>Rei</span><span>Autor</span></div>
+    ${!ready && !S.dbDown ? `<div class="empty">Carregando builds…</div>` :
+      list.length ? list.map((b,i)=>{
+        const k=KMAP[b.king];
+        return `<button class="li ${i<3&&S.sort==="top"?"top":""}" data-key="${esc(b.key)}">
+          <span class="rank">${i+1}</span>
+          <span class="score ${b.t.score<0?"neg":""}"><span class="tri"></span><span class="num">${b.t.score}</span></span>
+          <span class="ttl"><b>${esc(b.title)}${b.example?'<span class="tag-ex">exemplo</span>':""}</b><span>${esc(b.summary||"")}</span></span>
+          <span class="kcol"><span class="kbadge" style="--kc:${k.color}"><i></i>${esc(k.name)}</span></span>
+          <span class="meta">${esc(authorName(b))}<small>${fmtDate(b.updatedAt||b.createdAt)}</small></span>
+        </button>`;}).join("")
+      : `<div class="empty">${total?"Nenhuma build com esses filtros.":"Nenhuma build publicada ainda."} ${loggedIn()?`<br><br><button class="btn primary" id="emptyNew">Publicar a primeira</button>`:""}</div>`}
+  </section>`;
+
+  app.querySelectorAll(".chip[data-k]").forEach(c=>c.onclick=()=>{ S.filterKing=c.dataset.k; render(); });
+  const q=$("#q"); q.oninput=()=>{ S.q=q.value; const pos=q.selectionStart; render(); const n=$("#q"); n.focus(); try{n.setSelectionRange(pos,pos)}catch(e){} };
+  $("#sort").onchange=e=>{ S.sort=e.target.value; render(); };
+  app.querySelectorAll(".li").forEach(r=>r.onclick=()=>go("build", r.dataset.key));
+  const en=$("#emptyNew"); if(en) en.onclick=()=>openEditor(null);
+}
+
+function gridHTML(layout, interactive){
+  const cells=[];
+  for(let i=0;i<GRID;i++){
+    const c=layout && layout[i]; const name=c && c.card;
+    const col=name?kcol(name):"var(--ink-3)";
+    const ench=(c&&c.ench)||[], tot=enchTotal(c);
+    const cls=`cell ${name?"full":""} ${tot?"enchanted":""} ${i===CENTER?"center":""} ${interactive&&S.selCell===i?"sel":""}`;
+    const gems = tot?`<span class="ench" aria-hidden="true">${ench.slice(0,3).map(e=>`<i style="--ec:${kcol(e.card)}"></i>`).join("")}<b>×${tot}</b></span>`:"";
+    const tip = name?name+(tot?" + "+ench.map(e=>e.card+" ×"+(e.n||1)).join(", "):""):"";
+    const inner = name?`${gems}<span>${esc(name)}</span>${c.lv?`<span class="lv">Nv${esc(c.lv)}</span>`:""}`:(i===CENTER?"<span>Base</span>":"");
+    cells.push(interactive
+      ? `<button type="button" class="${cls}" style="--kc:${col}" data-cell="${i}" title="${esc(tip)}" aria-label="Casa ${i+1}${name?": "+esc(tip):" vazia"}">${inner}</button>`
+      : `<div class="${cls}" style="--kc:${col}" title="${esc(tip)}">${inner}</div>`);
+  }
+  return `<div class="kgrid">${cells.join("")}</div>`;
+}
+
+function enchListHTML(layout){
+  const rows=(layout||[]).map((c,i)=>({c,i})).filter(x=>x.c && enchTotal(x.c));
+  if(!rows.length) return "";
+  return `<div class="enchlist"><h3>Encantamentos</h3>${rows.map(({c,i})=>`
+    <div class="erow"><span class="etroop" style="--kc:${kcol(c.card)}"><i></i>${esc(c.card)} <small>casa ${i+1}</small></span>
+      <span class="echips">${c.ench.map(e=>`<span class="echip" style="--ec:${kcol(e.card)}"><i></i>${esc(e.card)} <b>×${e.n||1}</b></span>`).join("")}</span></div>`).join("")}</div>`;
+}
+
+function renderBuild(app){
+  const b=allBuilds().find(x=>x.key===S.buildKey);
+  if(!b){
+    app.innerHTML=`<button class="back" id="bk">← Voltar ao ranking</button>
+      <div class="empty">${S.loaded.builds?"Essa build não existe mais ou foi removida.":"Carregando build…"}</div>`;
+    $("#bk").onclick=()=>go("home"); return;
+  }
+  const k=KMAP[b.king], t=tally(b.key), mv=myVote(b.key);
+  const mine = loggedIn() && b.owner===S.me.id;
+  const paras=(b.guide||"").split(/\n\s*\n/).filter(Boolean);
+  app.innerHTML=`
+  <button class="back" id="bk">← Voltar ao ranking</button>
+  <header class="bhead">
+    <div>
+      <div class="eyebrow">Build · ${esc(k.pt)}</div>
+      <h1>${esc(b.title)}${b.example?'<span class="tag-ex">exemplo</span>':""}</h1>
+      <div class="bsub">
+        <span class="kbadge" style="--kc:${k.color}"><i></i>${esc(k.name)}</span>
+        <span>por <strong style="color:var(--ink)">${esc(authorName(b))}</strong></span>
+        ${b.patch?`<span>Versão ${esc(b.patch)}</span>`:""}
+        <span>Atualizada em ${fmtDate(b.updatedAt||b.createdAt)}</span>
+      </div>
+    </div>
+    <div class="voter" aria-label="Avaliação">
+      <button class="up" id="vUp" aria-pressed="${mv===1}" aria-label="Votar a favor"><svg width="14" height="10" viewBox="0 0 14 10"><path d="M7 0l7 10H0z" fill="currentColor"/></svg></button>
+      <span class="num">${t.score}</span>
+      <button class="down" id="vDown" aria-pressed="${mv===-1}" aria-label="Votar contra"><svg width="14" height="10" viewBox="0 0 14 10"><path d="M7 10L0 0h14z" fill="currentColor"/></svg></button>
+      <small>${t.up} ▲ · ${t.down} ▼</small>
+    </div>
+  </header>
+  <div class="bgrid">
+    <div>
+      ${b.summary?`<section class="sec"><p class="summary">${esc(b.summary)}</p></section>`:""}
+      <section class="sec"><h2>Estratégia</h2>
+        <div class="guide">${paras.length?paras.map(p=>`<p>${esc(p)}</p>`).join(""):`<p style="color:var(--ink-3)">O autor ainda não escreveu o guia.</p>`}</div>
+      </section>
+    </div>
+    <aside class="side">
+      <section class="sec"><h2>Reino</h2>${gridHTML(b.layout,false)}
+        <div class="legend">A casa dourada é a base do reino. As cores indicam o rei de origem de cada carta. Os losangos no canto mostram os encantamentos aplicados na tropa.</div>
+        ${enchListHTML(b.layout)}</section>
+      <section class="box sec" style="margin:0"><h2>Perks</h2>
+        ${(b.perks||[]).length?`<div class="perks">${b.perks.map(p=>`<span class="perk">${esc(p)}</span>`).join("")}</div>`:`<span style="color:var(--ink-3)">Nenhum perk informado.</span>`}
+        ${(b.tags||[]).length?`<h2 style="margin-top:8px">Estilo</h2><div class="tags">${b.tags.map(x=>`<span class="tag">${esc(x)}</span>`).join("")}</div>`:""}
+      </section>
+      ${mine?`<section class="owner-actions" id="oa"><button class="btn" id="edBtn">Editar build</button><button class="btn danger" id="delBtn">Excluir</button></section>`:""}
+    </aside>
+  </div>`;
+  $("#bk").onclick=()=>go("home");
+  $("#vUp").onclick=()=>vote(b.key, mv===1?0:1);
+  $("#vDown").onclick=()=>vote(b.key, mv===-1?0:-1);
+  if(mine){
+    $("#edBtn").onclick=()=>openEditor(b);
+    $("#delBtn").onclick=()=>{
+      $("#oa").innerHTML=`<span style="color:var(--ink-2)">Excluir de vez?</span><button class="btn danger" id="delYes">Sim, excluir</button><button class="btn ghost" id="delNo">Cancelar</button>`;
+      $("#delNo").onclick=render;
+      $("#delYes").onclick=async()=>{
+        try{ await deleteBuild(b.id); toast("Build excluída."); go("home"); }
+        catch(e){ toast(writeErr(e)); render(); }
+      };
+    };
+  }
+}
+
+/* ---------- Writes ---------- */
+async function vote(key, val){
+  if(!loggedIn()){ login(); return; }
+  const prev=S.myVotes[key]||0, b=S.builds.find(x=>x.key===key);
+  // atualização otimista
+  if(b){ const t=b.t; if(prev===1)t.up--; if(prev===-1)t.down--; if(val===1)t.up++; if(val===-1)t.down++; t.score=t.up-t.down; }
+  if(val) S.myVotes[key]=val; else delete S.myVotes[key];
+  render();
+  const q = val ? S.sb.from("votes").upsert({build_id:key,user_id:S.me.id,value:val})
+                : S.sb.from("votes").delete().eq("build_id",key).eq("user_id",S.me.id);
+  const {error}=await q;
+  if(error){ toast(writeErr(error)); }
+  refresh();
+}
+async function saveBuild(id, rec){
+  const q = id ? S.sb.from("builds").update(rec).eq("id",id).select("id").single()
+               : S.sb.from("builds").insert({...rec, owner:S.me.id}).select("id").single();
+  const {data,error}=await q; if(error) throw error;
+  await loadBuilds(); return data.id;
+}
+async function deleteBuild(id){
+  const {error}=await S.sb.from("builds").delete().eq("id",id); if(error) throw error;
+  await loadBuilds();
+}
+
+/* ---------- Editor ---------- */
+function openEditor(b){
+  if(!loggedIn()){ login(); return; }
+  S.draft = b ? JSON.parse(JSON.stringify({id:b.id,title:b.title,king:b.king,patch:b.patch||"",summary:b.summary||"",guide:b.guide||"",perks:b.perks||[],tags:b.tags||[],layout:b.layout||Array(GRID).fill(null),createdAt:b.createdAt}))
+    : {id:null,title:"",king:"nothing",patch:"",summary:"",guide:"",perks:[],tags:[],layout:Array(GRID).fill(null)};
+  if(!b) S.draft.layout[CENTER]={card:"Castle",lv:1};
+  S.selCell=CENTER; S.editErr="";
+  go("edit");
+}
+function renderEditor(app){
+  const d=S.draft; if(!d){ go("home"); return; }
+  const k=KMAP[d.king];
+  const sel=d.layout[S.selCell];
+  const order=[k, ...KINGS.filter(x=>x.id!==k.id)];
+  const selTroop = sel && CARD_TYPE[sel.card]==="troop";
+  const match = c=>!S.pq||c.toLowerCase().includes(S.pq.toLowerCase());
+  app.innerHTML=`
+  <button class="back" id="bk">← ${d.id?"Voltar para a build":"Voltar ao ranking"}</button>
+  <h1 style="font-size:32px">${d.id?"Editar build":"Nova build"}</h1>
+  <form class="form" id="ef" novalidate>
+    <label>Título <input class="field" id="fTitle" maxlength="80" value="${esc(d.title)}" placeholder="ex.: Muralha de Balistas com juros do Vault"></label>
+    <div class="two">
+      <label>Rei <select class="field" id="fKing">${KINGS.map(x=>`<option value="${x.id}" ${x.id===d.king?"selected":""}>${esc(x.name)} (${esc(x.pt)})</option>`).join("")}</select></label>
+      <label>Versão do jogo <small>opcional</small><input class="field" id="fPatch" maxlength="24" value="${esc(d.patch)}" placeholder="ex.: 0.9.4"></label>
+    </div>
+    <label>Resumo <small>uma frase que aparece no ranking</small><input class="field" id="fSum" maxlength="140" value="${esc(d.summary)}" placeholder="O que a build faz e por que funciona"></label>
+
+    <div style="display:grid;gap:8px"><b>Perks de ${esc(k.name)}</b>
+      <div class="perks">${k.perks.map(p=>`<button type="button" class="chip" style="--kc:${k.color}" data-perk="${esc(p)}" aria-pressed="${d.perks.includes(p)}">${esc(p)}</button>`).join("")}</div></div>
+
+    <div style="display:grid;gap:8px"><b>Estilo</b>
+      <div class="tags">${STYLES.map(s=>`<button type="button" class="chip" data-tag="${esc(s)}" aria-pressed="${d.tags.includes(s)}">${esc(s)}</button>`).join("")}</div></div>
+
+    <div style="display:grid;gap:10px"><b>Reino (5×5)</b>
+      <div class="editor-grid">
+        <div style="display:grid;gap:10px">
+          ${gridHTML(d.layout,true)}
+          <div class="legend">Arraste cartas da lista para o grid, ou arraste uma carta do grid para outra casa (troca de lugar). Também dá para clicar numa casa e depois na carta.</div>
+          <div class="cellctl">Casa ${S.selCell+1}${S.selCell===CENTER?" (base)":""}: <strong style="color:var(--ink)">${sel?esc(sel.card):"vazia"}</strong>${sel?` <small style="color:var(--ink-3)">${TYPE_PT[CARD_TYPE[sel.card]]||""}</small>`:""}
+            ${sel?`<label style="display:inline-flex;align-items:center;gap:6px;font-weight:400">Nível <select class="field" id="fLv" style="padding:4px 8px">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option ${sel.lv==n?"selected":""}>${n}</option>`).join("")}</select></label>
+            <button type="button" class="btn ghost" id="clr" style="padding:4px 10px">Limpar casa</button>`:""}
+          </div>
+          ${selTroop?`<div class="enchpanel"><b>Encantamentos em ${esc(sel.card)}</b>
+            ${(sel.ench||[]).length?(sel.ench).map((e,j)=>`<div class="erow2"><span class="echip" style="--ec:${kcol(e.card)}"><i></i>${esc(e.card)}</span>
+              <span class="stepper"><button type="button" data-edec="${j}" aria-label="Remover uma camada de ${esc(e.card)}">−</button><b class="num">${e.n||1}</b><button type="button" data-einc="${j}" aria-label="Adicionar uma camada de ${esc(e.card)}">+</button></span></div>`).join("")
+            :`<span class="legend">Nenhum. Arraste um encantamento para cima desta tropa ou clique num deles na lista.</span>`}</div>`:""}
+        </div>
+        <div style="display:grid;gap:8px;align-content:start">
+          <input class="field" id="pq" placeholder="Filtrar cartas" aria-label="Filtrar cartas" value="${esc(S.pq||"")}">
+          <div class="palette">
+            ${(()=>{ const en=ALL_ENCH.filter(e=>match(e.card)); return en.length?`<div class="pgroup enchgroup"><h3>Encantamentos <small>vão por cima de uma tropa, acumulam camadas</small></h3><div class="pcards">${en.map(e=>`<button type="button" class="pcard penc" style="--kc:${e.king.color}" data-ench="${esc(e.card)}" ${selTroop?"":"aria-disabled=\"true\""}><i></i>${esc(e.card)}</button>`).join("")}</div></div>`:""; })()}
+            ${[...order,SPECIAL].map(x=>{
+              const cards=PLACEABLE.flatMap(t=>x.c[t]).filter(match);
+              return cards.length?`<div class="pgroup" style="--kc:${x.color}"><h3>${esc(x.name)}</h3><div class="pcards">${cards.map(c=>`<button type="button" class="pcard" data-card="${esc(c)}" title="${TYPE_PT[CARD_TYPE[c]]}">${esc(c)}<small>${TYPE_PT[CARD_TYPE[c]]}</small></button>`).join("")}</div></div>`:"";
+            }).join("")}
+          </div>
+          <div class="legend">Tomos não aparecem aqui porque são jogados uma vez e não ficam no reino. Cite-os na estratégia.</div>
+        </div>
+      </div>
+    </div>
+
+    <label>Estratégia <small>ordem de compra, quando expandir, contra quais reis funciona. Separe parágrafos com uma linha em branco.</small>
+      <textarea class="field" id="fGuide" maxlength="6000">${esc(d.guide)}</textarea></label>
+    <div class="err" id="eErr" ${S.editErr?"":"hidden"}>${esc(S.editErr||"")}</div>
+    <div class="formbar"><button type="button" class="btn ghost" id="cancel">Cancelar</button><button type="submit" class="btn primary" id="saveBtn">${d.id?"Salvar alterações":"Publicar build"}</button></div>
+  </form>`;
+
+  const sync=()=>{ d.title=$("#fTitle").value; d.patch=$("#fPatch").value; d.summary=$("#fSum").value; d.guide=$("#fGuide").value; };
+  const rerender=()=>{ sync(); const y=window.scrollY; render(); window.scrollTo(0,y); };
+  $("#bk").onclick=$("#cancel").onclick=()=>{ const id=d.id; S.draft=null; id?go("build",id):go("home"); };
+  $("#fKing").onchange=e=>{ const old=KMAP[d.king]; d.king=e.target.value; d.perks=[];
+    const nk=KMAP[d.king]; const c=d.layout[CENTER]; if(!c || c.card===old.base) d.layout[CENTER]={card:nk.base,lv:(c&&c.lv)||1}; rerender(); };
+  app.querySelectorAll("[data-perk]").forEach(b=>b.onclick=()=>{ const p=b.dataset.perk; d.perks=d.perks.includes(p)?d.perks.filter(x=>x!==p):[...d.perks,p]; rerender(); });
+  app.querySelectorAll("[data-tag]").forEach(b=>b.onclick=()=>{ const p=b.dataset.tag; d.tags=d.tags.includes(p)?d.tags.filter(x=>x!==p):[...d.tags,p]; rerender(); });
+
+  /* grid actions shared by click and drag */
+  const placeCard=(i,card)=>{ const cur=d.layout[i]; const keep=cur && CARD_TYPE[card]==="troop" && CARD_TYPE[cur.card]==="troop";
+    d.layout[i]={card, lv:(cur&&cur.lv)||1, ench: keep?(cur.ench||[]):[]}; };
+  const addEnch=(i,card)=>{ const cur=d.layout[i];
+    if(!cur || CARD_TYPE[cur.card]!=="troop"){ toast("Encantamentos só vão por cima de uma tropa."); return false; }
+    const list=cur.ench=(cur.ench||[]); const e=list.find(x=>x.card===card); if(e) e.n=(e.n||1)+1; else list.push({card,n:1}); return true; };
+  const moveCell=(from,to)=>{ if(from===to) return; const a=d.layout[from]; d.layout[from]=d.layout[to]; d.layout[to]=a; };
+
+  let justDragged=false;
+  app.querySelectorAll("[data-cell]").forEach(b=>b.onclick=()=>{ if(justDragged) return; S.selCell=+b.dataset.cell; rerender(); });
+  app.querySelectorAll("[data-card]").forEach(b=>b.onclick=()=>{ if(justDragged) return; placeCard(S.selCell,b.dataset.card);
+    const nxt=d.layout.findIndex((c,i)=>!c && i>S.selCell); if(nxt>-1) S.selCell=nxt; rerender(); });
+  app.querySelectorAll("[data-ench]").forEach(b=>b.onclick=()=>{ if(justDragged) return; if(addEnch(S.selCell,b.dataset.ench)) rerender(); });
+  app.querySelectorAll("[data-einc]").forEach(b=>b.onclick=()=>{ const e=sel.ench[+b.dataset.einc]; e.n=(e.n||1)+1; rerender(); });
+  app.querySelectorAll("[data-edec]").forEach(b=>b.onclick=()=>{ const j=+b.dataset.edec, e=sel.ench[j]; if((e.n||1)>1) e.n--; else sel.ench.splice(j,1); rerender(); });
+
+  /* pointer drag: palette cards, enchantments and filled grid cells */
+  const startDrag=(ev, src)=>{
+    if(ev.button>0) return;
+    if(!src.dataset.cell && ev.pointerType==="touch") return; // palette scrolls on touch; tap to place instead
+    const x0=ev.clientX, y0=ev.clientY; let ghost=null, over=null;
+    const label = src.dataset.card||src.dataset.ench||(d.layout[+src.dataset.cell]||{}).card;
+    if(!label) return;
+    const col = src.dataset.ench?kcol(src.dataset.ench):kcol(label);
+    const move=e=>{
+      if(!ghost){ if(Math.hypot(e.clientX-x0,e.clientY-y0)<6) return;
+        ghost=document.createElement("div"); ghost.className="ghost"+(src.dataset.ench?" isench":""); ghost.style.setProperty("--kc",col); ghost.textContent=label; document.body.appendChild(ghost);
+        src.classList.add("dragging"); }
+      e.preventDefault();
+      ghost.style.transform=`translate(${e.clientX+10}px,${e.clientY+10}px)`;
+      const t=document.elementFromPoint(e.clientX,e.clientY); const cell=t&&t.closest("[data-cell]");
+      if(over!==cell){ over&&over.classList.remove("dropover"); over=cell; over&&over.classList.add("dropover"); }
+    };
+    const up=()=>{
+      window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",up); window.removeEventListener("pointercancel",up);
+      if(!ghost) return;
+      ghost.remove(); src.classList.remove("dragging"); justDragged=true; setTimeout(()=>justDragged=false,0);
+      if(!over) return;
+      const to=+over.dataset.cell;
+      if(src.dataset.cell!==undefined) moveCell(+src.dataset.cell,to);
+      else if(src.dataset.card) placeCard(to,src.dataset.card);
+      else if(src.dataset.ench && !addEnch(to,src.dataset.ench)) return;
+      S.selCell=to; rerender();
+    };
+    window.addEventListener("pointermove",move,{passive:false}); window.addEventListener("pointerup",up); window.addEventListener("pointercancel",up);
+  };
+  app.querySelectorAll("[data-card],[data-ench],.cell.full[data-cell]").forEach(el=>el.addEventListener("pointerdown",e=>startDrag(e,el)));
+  const lv=$("#fLv"); if(lv) lv.onchange=()=>{ d.layout[S.selCell].lv=+lv.value; rerender(); };
+  const clr=$("#clr"); if(clr) clr.onclick=()=>{ d.layout[S.selCell]=null; rerender(); };
+  const pq=$("#pq"); pq.oninput=()=>{ S.pq=pq.value; rerender(); const n=$("#pq"); n.focus(); n.setSelectionRange(n.value.length,n.value.length); };
+
+  $("#ef").onsubmit=async e=>{
+    e.preventDefault(); sync();
+    if(d.title.trim().length<4){ S.editErr="Dê um título com pelo menos 4 caracteres."; return rerender(); }
+    if(!d.layout.some(Boolean)){ S.editErr="Coloque pelo menos uma carta no reino."; return rerender(); }
+    $("#saveBtn").disabled=true;
+    const rec={title:d.title.trim(),king:d.king,patch:d.patch.trim(),summary:d.summary.trim(),guide:d.guide.trim(),
+      perks:d.perks,tags:d.tags,layout:d.layout.map(c=>c?{card:c.card,lv:c.lv||1,ench:(CARD_TYPE[c.card]==="troop"?(c.ench||[]):[]).map(e=>({card:e.card,n:e.n||1}))}:null)};
+    try{
+      const newId=await saveBuild(d.id, rec);
+      S.draft=null; S.editErr=""; toast(d.id?"Build atualizada.":"Build publicada!"); go("build", newId);
+    }catch(err){ S.editErr=writeErr(err); rerender(); }
+  };
+}
+
+/* ---------- Boot ---------- */
+(function(){
+  const h=(location.hash||"").replace(/^#/,"");
+  if(h.startsWith("b-")){ S.view="build"; S.buildKey=h.slice(2); }
+  render();
+})();
+
+(async()=>{
+  const cfg=window.MESA_CONFIG||{};
+  if(!window.supabase || !cfg.supabaseUrl || !cfg.supabaseAnonKey || cfg.supabaseUrl.includes("SEU-PROJETO")){
+    S.dbDown=true; S.loaded.builds=true; render(); return;
+  }
+  S.sb=window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+  const {data:{session}}=await S.sb.auth.getSession();
+  S.session=session; S.me.id=session?.user?.id||null;
+  await Promise.all([loadBuilds(), loadMine()]);
+  render();
+  S.sb.auth.onAuthStateChange(async(ev,session)=>{
+    if(ev==="INITIAL_SESSION" || ev==="TOKEN_REFRESHED") return;
+    S.session=session; S.me.id=session?.user?.id||null;
+    // evita chamar o banco dentro do callback de auth
+    setTimeout(async()=>{ await loadMine(); await loadBuilds();
+      if(S.view==="edit" && !loggedIn()){ S.draft=null; S.view="home"; }
+      render(); },0);
+  });
+  window.addEventListener("focus",()=>{ if(S.view!=="edit") refresh(); });
+})();
+</script>
+</body>
+</html>
