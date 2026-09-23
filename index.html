@@ -206,8 +206,18 @@ textarea.field{min-height:180px;resize:vertical;line-height:1.5}
 @media (hover:hover){.palette .pcard{cursor:grab}.cell.full[data-cell]{cursor:grab}}
 .dragging{opacity:.4}
 .cell.dropover{box-shadow:0 0 0 3px var(--gold);background:color-mix(in srgb, var(--gold) 18%, #161925)}
-.ghost{position:fixed;left:0;top:0;z-index:70;pointer-events:none;padding:6px 12px;border-radius:6px;background:var(--panel-2);border:1px solid var(--kc);border-left:4px solid var(--kc);font-weight:700;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
-.ghost.isench{border-style:dashed;border-color:var(--gold);color:var(--gold)}
+.dragghost{position:fixed;left:0;top:0;z-index:70;pointer-events:none;padding:6px 12px;border-radius:6px;background:var(--panel-2);border:1px solid var(--kc);border-left:4px solid var(--kc);font-weight:700;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.dragghost.isench{border-style:dashed;border-color:var(--gold);color:var(--gold)}
+/* years */
+.yearbar{display:grid;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.years{display:flex;flex-wrap:wrap;gap:6px;max-width:440px}
+.yeartab{font-family:var(--display);font-size:14px;border:1px solid var(--line);background:var(--ground-2);color:var(--ink-2);border-radius:6px;padding:5px 12px}
+.yeartab[aria-selected="true"]{background:var(--gold);color:var(--gold-ink);border-color:var(--gold)}
+.yeartab.add{border-style:dashed;color:var(--gold);font-family:var(--body);font-size:14px}
+.yearctl{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.yearctl label{display:inline-flex;align-items:center;gap:8px;font-weight:500}
+.yearctl input{width:90px;padding:5px 10px}
+.yearnow{color:var(--ink-2);font-size:13px;letter-spacing:.08em}
 </style>
 </head>
 <body>
@@ -298,10 +308,18 @@ function allBuilds(){ return S.builds; }
 function rowToBuild(r){
   return {id:r.id, key:r.id, owner:r.owner, ownerNick:r.owner_nick, example:!r.owner,
     title:r.title, king:r.king, patch:r.patch||"", summary:r.summary||"", guide:r.guide||"",
-    perks:r.perks||[], tags:r.tags||[], layout:Array.isArray(r.layout)?r.layout:Array(GRID).fill(null),
+    perks:r.perks||[], tags:r.tags||[], stages:normStages(r.layout),
     createdAt:Date.parse(r.created_at)||0, updatedAt:Date.parse(r.updated_at)||0,
     t:{up:r.up||0, down:r.down||0, score:r.score||0}};
 }
+function normStages(L){
+  const blank=()=>Array(GRID).fill(null);
+  const fix=c=>Array.isArray(c)&&c.length===GRID?c:blank();
+  if(Array.isArray(L)) return [{year:null,cells:fix(L)}];
+  if(L && Array.isArray(L.stages) && L.stages.length) return L.stages.map(x=>({year:Number.isFinite(+x.year)&&x.year!==null?+x.year:null,cells:fix(x.cells)}));
+  return [{year:null,cells:blank()}];
+}
+const yearLabel=st=>st.year?("Ano "+st.year):"Reino";
 function tally(key){ const b=S.builds.find(x=>x.key===key); return b?b.t:{up:0,down:0,score:0}; }
 function myVote(key){ return S.myVotes[key]||0; }
 function authorName(b){ return b.example ? "Mesa dos Reis" : (b.ownerNick || "Jogador"); }
@@ -356,6 +374,7 @@ function authMsg(e){
   if(m.includes("email not confirmed")) return "Confirme seu e-mail pelo link que enviamos antes de entrar.";
   if(m.includes("already registered")) return "Esse e-mail já tem conta. Use Entrar.";
   if(m.includes("password")) return "A senha precisa ter pelo menos 6 caracteres.";
+  if(m.includes("email rate limit")) return "O site atingiu o limite de envio de e-mails de confirmação. Tente de novo mais tarde.";
   if(m.includes("rate limit")) return "Muitas tentativas. Aguarde alguns minutos.";
   if(e && e.code==="23505") return "Esse nome de jogador já está em uso. Tente outro.";
   return "Não foi possível concluir agora. Tente de novo.";
@@ -515,6 +534,8 @@ function renderBuild(app){
   const k=KMAP[b.king], t=tally(b.key), mv=myVote(b.key);
   const mine = loggedIn() && b.owner===S.me.id;
   const paras=(b.guide||"").split(/\n\s*\n/).filter(Boolean);
+  if(S.viewKey!==b.key){ S.viewKey=b.key; S.viewStage=b.stages.length-1; }
+  const vi=Math.min(S.viewStage,b.stages.length-1), st=b.stages[vi];
   app.innerHTML=`
   <button class="back" id="bk">← Voltar ao ranking</button>
   <header class="bhead">
@@ -543,9 +564,11 @@ function renderBuild(app){
       </section>
     </div>
     <aside class="side">
-      <section class="sec"><h2>Reino</h2>${gridHTML(b.layout,false)}
+      <section class="sec"><h2>Reino${st.year?` <span class="yearnow">· ano ${st.year}</span>`:""}</h2>
+        ${b.stages.length>1?`<div class="years" role="tablist" aria-label="Reino por ano">${b.stages.map((x,i)=>`<button type="button" class="yeartab" role="tab" data-vy="${i}" aria-selected="${i===vi}">${esc(yearLabel(x))}</button>`).join("")}</div>`:""}
+        ${gridHTML(st.cells,false)}
         <div class="legend">A casa dourada é a base do reino. As cores indicam o rei de origem de cada carta. Os losangos no canto mostram os encantamentos aplicados na tropa.</div>
-        ${enchListHTML(b.layout)}</section>
+        ${enchListHTML(st.cells)}</section>
       <section class="box sec" style="margin:0"><h2>Perks</h2>
         ${(b.perks||[]).length?`<div class="perks">${b.perks.map(p=>`<span class="perk">${esc(p)}</span>`).join("")}</div>`:`<span style="color:var(--ink-3)">Nenhum perk informado.</span>`}
         ${(b.tags||[]).length?`<h2 style="margin-top:8px">Estilo</h2><div class="tags">${b.tags.map(x=>`<span class="tag">${esc(x)}</span>`).join("")}</div>`:""}
@@ -554,6 +577,7 @@ function renderBuild(app){
     </aside>
   </div>`;
   $("#bk").onclick=()=>go("home");
+  app.querySelectorAll("[data-vy]").forEach(t=>t.onclick=()=>{ S.viewStage=+t.dataset.vy; render(); });
   $("#vUp").onclick=()=>vote(b.key, mv===1?0:1);
   $("#vDown").onclick=()=>vote(b.key, mv===-1?0:-1);
   if(mine){
@@ -597,9 +621,12 @@ async function deleteBuild(id){
 /* ---------- Editor ---------- */
 function openEditor(b){
   if(!loggedIn()){ login(); return; }
-  S.draft = b ? JSON.parse(JSON.stringify({id:b.id,title:b.title,king:b.king,patch:b.patch||"",summary:b.summary||"",guide:b.guide||"",perks:b.perks||[],tags:b.tags||[],layout:b.layout||Array(GRID).fill(null),createdAt:b.createdAt}))
-    : {id:null,title:"",king:"nothing",patch:"",summary:"",guide:"",perks:[],tags:[],layout:Array(GRID).fill(null)};
-  if(!b) S.draft.layout[CENTER]={card:"Castle",lv:1};
+  const d = b ? JSON.parse(JSON.stringify({id:b.id,title:b.title,king:b.king,patch:b.patch||"",summary:b.summary||"",guide:b.guide||"",perks:b.perks||[],tags:b.tags||[],stages:b.stages}))
+    : {id:null,title:"",king:"nothing",patch:"",summary:"",guide:"",perks:[],tags:[],stages:[{year:1,cells:Array(GRID).fill(null)}]};
+  if(!b) d.stages[0].cells[CENTER]={card:"Castle",lv:1};
+  // d.layout aponta sempre para o grid do ano selecionado
+  Object.defineProperty(d,"layout",{get(){ return d.stages[S.stageIdx].cells; }, enumerable:false});
+  S.draft=d; S.stageIdx=d.stages.length-1;
   S.selCell=CENTER; S.editErr="";
   go("edit");
 }
@@ -628,6 +655,15 @@ function renderEditor(app){
       <div class="tags">${STYLES.map(s=>`<button type="button" class="chip" data-tag="${esc(s)}" aria-pressed="${d.tags.includes(s)}">${esc(s)}</button>`).join("")}</div></div>
 
     <div style="display:grid;gap:10px"><b>Reino (5×5)</b>
+      <div class="yearbar">
+        <div class="years" role="tablist" aria-label="Anos da build">${d.stages.map((x,i)=>`<button type="button" class="yeartab" role="tab" data-sy="${i}" aria-selected="${i===S.stageIdx}">${esc(yearLabel(x))}</button>`).join("")}
+          <button type="button" class="yeartab add" id="addYear">+ Adicionar ano</button></div>
+        <div class="yearctl">
+          <label>Ano deste reino <input class="field" id="fYear" type="number" min="1" max="99" inputmode="numeric" value="${d.stages[S.stageIdx].year??""}" placeholder="ex.: 12"></label>
+          ${d.stages.length>1?`<button type="button" class="btn ghost" id="delYear" style="padding:4px 10px">Remover ${esc(yearLabel(d.stages[S.stageIdx]))}</button>`:""}
+          <span class="legend">Um novo ano começa como cópia do reino selecionado.</span>
+        </div>
+      </div>
       <div class="editor-grid">
         <div style="display:grid;gap:10px">
           ${gridHTML(d.layout,true)}
@@ -695,7 +731,7 @@ function renderEditor(app){
     const col = src.dataset.ench?kcol(src.dataset.ench):kcol(label);
     const move=e=>{
       if(!ghost){ if(Math.hypot(e.clientX-x0,e.clientY-y0)<6) return;
-        ghost=document.createElement("div"); ghost.className="ghost"+(src.dataset.ench?" isench":""); ghost.style.setProperty("--kc",col); ghost.textContent=label; document.body.appendChild(ghost);
+        ghost=document.createElement("div"); ghost.className="dragghost"+(src.dataset.ench?" isench":""); ghost.style.setProperty("--kc",col); ghost.textContent=label; document.body.appendChild(ghost);
         src.classList.add("dragging"); }
       e.preventDefault();
       ghost.style.transform=`translate(${e.clientX+10}px,${e.clientY+10}px)`;
@@ -720,13 +756,24 @@ function renderEditor(app){
   const clr=$("#clr"); if(clr) clr.onclick=()=>{ d.layout[S.selCell]=null; rerender(); };
   const pq=$("#pq"); pq.oninput=()=>{ S.pq=pq.value; rerender(); const n=$("#pq"); n.focus(); n.setSelectionRange(n.value.length,n.value.length); };
 
+  app.querySelectorAll("[data-sy]").forEach(t=>t.onclick=()=>{ S.stageIdx=+t.dataset.sy; S.selCell=CENTER; rerender(); });
+  $("#addYear").onclick=()=>{
+    const cur=d.stages[S.stageIdx]; const maxY=Math.max(0,...d.stages.map(x=>x.year||0));
+    d.stages.push({year:Math.min(99,maxY+5), cells:JSON.parse(JSON.stringify(cur.cells))});
+    S.stageIdx=d.stages.length-1; rerender(); };
+  const fy=$("#fYear"); fy.oninput=()=>{ const v=parseInt(fy.value,10); d.stages[S.stageIdx].year = v>=1&&v<=99 ? v : null; }; fy.onchange=()=>rerender();
+  const dy=$("#delYear"); if(dy) dy.onclick=()=>{ d.stages.splice(S.stageIdx,1); S.stageIdx=Math.max(0,S.stageIdx-1); rerender(); };
   $("#ef").onsubmit=async e=>{
     e.preventDefault(); sync();
     if(d.title.trim().length<4){ S.editErr="Dê um título com pelo menos 4 caracteres."; return rerender(); }
-    if(!d.layout.some(Boolean)){ S.editErr="Coloque pelo menos uma carta no reino."; return rerender(); }
+    if(d.stages.some(x=>!x.cells.some(Boolean))){ S.editErr="Todo ano precisa de pelo menos uma carta no reino. Remova os anos vazios."; return rerender(); }
+    const ys=d.stages.map(x=>x.year).filter(Boolean);
+    if(d.stages.length>1 && ys.length!==d.stages.length){ S.editErr="Informe o número do ano em cada reino."; return rerender(); }
+    if(new Set(ys).size!==ys.length){ S.editErr="Há dois reinos com o mesmo ano."; return rerender(); }
     $("#saveBtn").disabled=true;
     const rec={title:d.title.trim(),king:d.king,patch:d.patch.trim(),summary:d.summary.trim(),guide:d.guide.trim(),
-      perks:d.perks,tags:d.tags,layout:d.layout.map(c=>c?{card:c.card,lv:c.lv||1,ench:(CARD_TYPE[c.card]==="troop"?(c.ench||[]):[]).map(e=>({card:e.card,n:e.n||1}))}:null)};
+      perks:d.perks,tags:d.tags,layout:{stages:[...d.stages].sort((a,b)=>(a.year||0)-(b.year||0)).map(x=>({year:x.year||null,
+        cells:x.cells.map(c=>c?{card:c.card,lv:c.lv||1,ench:(CARD_TYPE[c.card]==="troop"?(c.ench||[]):[]).map(e=>({card:e.card,n:e.n||1}))}:null)}))}};
     try{
       const newId=await saveBuild(d.id, rec);
       S.draft=null; S.editErr=""; toast(d.id?"Build atualizada.":"Build publicada!"); go("build", newId);
