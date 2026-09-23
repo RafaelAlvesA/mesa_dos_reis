@@ -218,6 +218,17 @@ textarea.field{min-height:180px;resize:vertical;line-height:1.5}
 .yearctl label{display:inline-flex;align-items:center;gap:8px;font-weight:500}
 .yearctl input{width:90px;padding:5px 10px}
 .yearnow{color:var(--ink-2);font-size:13px;letter-spacing:.08em}
+/* language switch */
+.lang{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.lang button{background:transparent;border:0;color:var(--ink-3);font-family:var(--display);font-size:13px;padding:6px 10px}
+.lang button[aria-pressed="true"]{background:var(--panel-2);color:var(--gold)}
+/* guide images */
+.guide .gimg{margin:4px 0 16px;display:grid;gap:6px;max-width:66ch}
+.guide .gimg img{border-radius:8px;border:1px solid var(--line);max-width:100%;height:auto;background:var(--ground-2)}
+.guide .gimg figcaption{font-size:14px;color:var(--ink-3)}
+.guidetools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:-8px}
+.gthumbs{display:flex;flex-wrap:wrap;gap:8px}
+.gthumbs img{height:72px;width:auto;border-radius:6px;border:1px solid var(--line)}
 </style>
 </head>
 <body>
@@ -231,14 +242,17 @@ textarea.field{min-height:180px;resize:vertical;line-height:1.5}
         <rect x="2" y="3" width="2" height="3" fill="#e3b541"/><rect x="6" y="3" width="2" height="3" fill="#e3b541"/><rect x="0" y="6" width="10" height="2" fill="#b3861f"/>
         <rect x="4" y="3" width="2" height="1" fill="#e0505a"/>
       </svg>
-      <span><b>Mesa dos Reis</b><small>builds de 9 Kings</small></span>
+      <span><b>Mesa dos Reis</b><small id="brandSub">builds de 9 Kings</small></span>
     </button>
     <span class="sp"></span>
+    <div class="lang" role="group" aria-label="Idioma / Language">
+      <button type="button" data-lang="pt" aria-pressed="true">PT</button><button type="button" data-lang="en" aria-pressed="false">EN</button>
+    </div>
     <div id="authArea" class="who"></div>
   </div>
 </header>
 
-<main class="wrap" id="app"><p class="notice">Carregando a mesa…</p></main>
+<main class="wrap" id="app"><p class="notice">Carregando… / Loading…</p></main>
 <div id="layer"></div>
 
 <script src="supabase.js"></script>
@@ -275,7 +289,7 @@ const KINGS = [
    c:{base:["Bastion"],troop:["Warper","Orbiter"],tower:["Hourglass"],building:["Portal","Amplifier"],ench:["Adrenaline","Temp Null"],tome:["Rewind","Regression"]},
    perks:["Agile","Brutal","Destructive","Exiler","Horologist","Invoker","Manipulative","Physicist","Wise"]},
 ];
-const SPECIAL = {id:"special", name:"Cartas especiais", pt:"Especiais", color:"var(--ink-2)",
+const SPECIAL = {id:"special", name:"Special cards", pt:"Cartas especiais", color:"var(--ink-2)",
   c:{base:[],troop:["Ogre","Golem","Scapegoat","Slime","Replicator"],tower:[],building:["Shrine","Gacha","Temple"],ench:[],tome:[]}, perks:[]};
 const TYPE_PT = {base:"Base",troop:"Tropa",tower:"Torre",building:"Construção",ench:"Encantamento",tome:"Tomo"};
 const PLACEABLE = ["base","troop","tower","building"];
@@ -289,6 +303,24 @@ const GRID = 25, CENTER = 12;
 const kcol = c=>{ const k=KMAP[CARD_KING[c]]; return k?k.color:"var(--ink-3)"; };
 const enchTotal = cell=>(cell&&cell.ench||[]).reduce((s,e)=>s+(e.n||1),0);
 
+/* ---------- Idioma (PT / EN) ---------- */
+let LANG = "pt";
+try{ LANG = localStorage.getItem("mdr-lang") || ((navigator.language||"pt").toLowerCase().startsWith("pt") ? "pt" : "en"); }catch(e){}
+const L = (pt,en)=> LANG==="en" ? en : pt;
+// Nomes oficiais da versão PT-BR do jogo que já foram confirmados. O que não está aqui aparece em inglês.
+const PT_CARDS = {"Soldier":"Soldado","Mercenary":"Mercenário","Library":"Biblioteca","Midas Touch":"Toque de Midas",
+  "Reinforce":"Reforço","Sacrifice":"Sacrifício","Concabulator":"Concabulador","Earthworks":"Terraplenagem","Clone":"Clonagem"};
+const PT_PERKS = {};
+const cardName = c=> LANG==="pt" ? (PT_CARDS[c]||c) : c;
+const perkName = p=> LANG==="pt" ? (PT_PERKS[p]||p) : p;
+const kingName = k=> LANG==="pt" ? (k.pt||k.name) : k.name;
+const kingShort = k=> LANG==="pt" ? (k.pt||k.name).replace(/^Rei (do|da|dos|das) /,"") : k.name.replace("King of ","");
+const TYPE_EN = {base:"Base",troop:"Troop",tower:"Tower",building:"Building",ench:"Enchantment",tome:"Tome"};
+const typeName = t=> LANG==="en" ? TYPE_EN[t] : TYPE_PT[t];
+const STYLE_EN = {"Economia":"Economy","Agressiva":"Aggressive","Defensiva":"Defensive","Escalável":"Scaling","Iniciante":"Beginner","Speedrun":"Speedrun","Alta dificuldade":"High difficulty","Sinergia de perks":"Perk synergy"};
+const styleName = s=> LANG==="en" ? (STYLE_EN[s]||s) : s;
+function setLang(l){ LANG=l; try{ localStorage.setItem("mdr-lang",l); }catch(e){} document.documentElement.lang = l==="en"?"en":"pt-BR"; render(); }
+
 /* ---------- State ---------- */
 const S = {
   sb:null, session:null, me:{id:null}, profile:null,
@@ -300,7 +332,7 @@ const S = {
 
 const $ = s=>document.querySelector(s);
 const esc = s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const fmtDate = t=>{ if(!t) return ""; try{return new Date(t).toLocaleDateString("pt-BR",{day:"2-digit",month:"short",year:"numeric"});}catch(e){return ""} };
+const fmtDate = t=>{ if(!t) return ""; try{return new Date(t).toLocaleDateString(LANG==="en"?"en-US":"pt-BR",{day:"2-digit",month:"short",year:"numeric"});}catch(e){return ""} };
 function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),3200); }
 
 /* ---------- Derived ---------- */
@@ -319,10 +351,52 @@ function normStages(L){
   if(L && Array.isArray(L.stages) && L.stages.length) return L.stages.map(x=>({year:Number.isFinite(+x.year)&&x.year!==null?+x.year:null,cells:fix(x.cells)}));
   return [{year:null,cells:blank()}];
 }
-const yearLabel=st=>st.year?("Ano "+st.year):"Reino";
+const yearLabel=st=>st.year?(L("Ano ","Year ")+st.year):L("Reino","Kingdom");
+/* ---------- Imagens na estratégia ---------- */
+const IMG_BUCKET="build-images";
+const imgBase=()=>{ const u=(window.MESA_CONFIG||{}).supabaseUrl||""; return u.replace(/\/$/,"")+"/storage/v1/object/public/"+IMG_BUCKET+"/"; };
+const IMG_RE=/^!\[([^\]]{0,200})\]\((https:\/\/[^)\s]+)\)$/;
+function guideHTML(text){
+  const base=imgBase();
+  return (text||"").split(/\n\s*\n/).filter(x=>x.trim()).map(par=>{
+    const lines=par.split("\n"); let out="", buf=[];
+    const flush=()=>{ if(buf.length){ out+=`<p>${esc(buf.join("\n"))}</p>`; buf=[]; } };
+    lines.forEach(line=>{
+      const m=line.trim().match(IMG_RE);
+      if(m && m[2].startsWith(base)){ flush(); out+=`<figure class="gimg"><img src="${esc(m[2])}" alt="${esc(m[1])}" loading="lazy">${m[1]?`<figcaption>${esc(m[1])}</figcaption>`:""}</figure>`; }
+      else buf.push(line);
+    });
+    flush(); return out;
+  }).join("");
+}
+async function shrinkImage(file){
+  // reduz imagens grandes para no máximo 1600px e converte para WebP
+  if(file.type==="image/gif") return file;
+  try{
+    const bmp=await createImageBitmap(file);
+    const scale=Math.min(1,1600/Math.max(bmp.width,bmp.height));
+    if(scale===1 && file.size<1.5e6) return file;
+    const c=document.createElement("canvas"); c.width=Math.round(bmp.width*scale); c.height=Math.round(bmp.height*scale);
+    c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);
+    const blob=await new Promise(r=>c.toBlob(r,"image/webp",0.85));
+    return blob && blob.size<file.size ? new File([blob],"img.webp",{type:"image/webp"}) : file;
+  }catch(e){ return file; }
+}
+async function uploadGuideImage(file){
+  const ok=["image/png","image/jpeg","image/webp","image/gif"];
+  if(!ok.includes(file.type)) throw new Error(L("Use uma imagem PNG, JPG, WebP ou GIF.","Use a PNG, JPG, WebP or GIF image."));
+  const f=await shrinkImage(file);
+  if(f.size>5*1024*1024) throw new Error(L("A imagem passa de 5 MB.","The image is over 5 MB."));
+  const ext={"image/png":"png","image/jpeg":"jpg","image/webp":"webp","image/gif":"gif"}[f.type]||"png";
+  const path=`${S.me.id}/${Date.now().toString(36)}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+  const {error}=await S.sb.storage.from(IMG_BUCKET).upload(path,f,{contentType:f.type,cacheControl:"31536000",upsert:false});
+  if(error) throw new Error(L("Não foi possível enviar a imagem. Tente de novo.","Could not upload the image. Try again."));
+  return imgBase()+path;
+}
+
 function tally(key){ const b=S.builds.find(x=>x.key===key); return b?b.t:{up:0,down:0,score:0}; }
 function myVote(key){ return S.myVotes[key]||0; }
-function authorName(b){ return b.example ? "Mesa dos Reis" : (b.ownerNick || "Jogador"); }
+function authorName(b){ return b.example ? "Mesa dos Reis" : (b.ownerNick || L("Jogador","Player")); }
 function loggedIn(){ return !!(S.me.id && S.profile && S.profile.nick); }
 
 /* ---------- Data ---------- */
@@ -353,16 +427,16 @@ async function refresh(){ await loadBuilds(); if(S.view!=="edit") render(); }
 function renderAuth(){
   const a=$("#authArea");
   if(loggedIn()){
-    a.innerHTML = `<span>Olá, <strong>${esc(S.profile.nick)}</strong></span>
-      <button class="btn primary" id="newBtn">+ Nova build</button><button class="btn ghost" id="outBtn">Sair</button>`;
+    a.innerHTML = `<span>${L("Olá","Hi")}, <strong>${esc(S.profile.nick)}</strong></span>
+      <button class="btn primary" id="newBtn">+ ${L("Nova build","New build")}</button><button class="btn ghost" id="outBtn">${L("Sair","Sign out")}</button>`;
     $("#newBtn").onclick=()=>openEditor(null);
-    $("#outBtn").onclick=async()=>{ await S.sb.auth.signOut(); toast("Você saiu."); };
+    $("#outBtn").onclick=async()=>{ await S.sb.auth.signOut(); toast(L("Você saiu.","You signed out.")); };
   } else if(S.me.id){
-    a.innerHTML = `<button class="btn primary" id="nickBtn">Escolher nome de jogador</button><button class="btn ghost" id="outBtn">Sair</button>`;
+    a.innerHTML = `<button class="btn primary" id="nickBtn">${L("Escolher nome de jogador","Choose a player name")}</button><button class="btn ghost" id="outBtn">${L("Sair","Sign out")}</button>`;
     $("#nickBtn").onclick=()=>authModal("nick");
     $("#outBtn").onclick=async()=>{ await S.sb.auth.signOut(); };
   } else {
-    a.innerHTML = `<button class="btn ghost" id="inBtn">Entrar</button><button class="btn primary" id="upBtn">Criar conta</button>`;
+    a.innerHTML = `<button class="btn ghost" id="inBtn">${L("Entrar","Sign in")}</button><button class="btn primary" id="upBtn">${L("Criar conta","Sign up")}</button>`;
     $("#inBtn").onclick=()=>authModal("in"); $("#upBtn").onclick=()=>authModal("up");
   }
 }
@@ -370,59 +444,59 @@ function login(){ authModal(S.me.id?"nick":"in"); }
 const NICK_RE=/^[A-Za-z0-9_À-ÿ .-]{3,24}$/;
 function authMsg(e){
   const m=(e&&e.message||"").toLowerCase();
-  if(m.includes("invalid login")) return "E-mail ou senha incorretos.";
-  if(m.includes("email not confirmed")) return "Confirme seu e-mail pelo link que enviamos antes de entrar.";
-  if(m.includes("already registered")) return "Esse e-mail já tem conta. Use Entrar.";
-  if(m.includes("password")) return "A senha precisa ter pelo menos 6 caracteres.";
-  if(m.includes("email rate limit")) return "O site atingiu o limite de envio de e-mails de confirmação. Tente de novo mais tarde.";
-  if(m.includes("rate limit")) return "Muitas tentativas. Aguarde alguns minutos.";
-  if(e && e.code==="23505") return "Esse nome de jogador já está em uso. Tente outro.";
-  return "Não foi possível concluir agora. Tente de novo.";
+  if(m.includes("invalid login")) return L("E-mail ou senha incorretos.","Wrong e-mail or password.");
+  if(m.includes("email not confirmed")) return L("Confirme seu e-mail pelo link que enviamos antes de entrar.","Confirm your e-mail with the link we sent before signing in.");
+  if(m.includes("already registered")) return L("Esse e-mail já tem conta. Use Entrar.","This e-mail already has an account. Use Sign in.");
+  if(m.includes("password")) return L("A senha precisa ter pelo menos 6 caracteres.","The password needs at least 6 characters.");
+  if(m.includes("email rate limit")) return L("O site atingiu o limite de envio de e-mails de confirmação. Tente de novo mais tarde.","The site hit its confirmation e-mail limit. Try again later.");
+  if(m.includes("rate limit")) return L("Muitas tentativas. Aguarde alguns minutos.","Too many attempts. Wait a few minutes.");
+  if(e && e.code==="23505") return L("Esse nome de jogador já está em uso. Tente outro.","That player name is taken. Try another one.");
+  return L("Não foi possível concluir agora. Tente de novo.","Something went wrong. Try again.");
 }
 function authModal(mode){
-  if(!S.sb){ modal(`<h2>Site sem conexão</h2><p>O banco de dados não está configurado. Confira o arquivo config.js.</p><div class="formbar"><button class="btn" data-close>Fechar</button></div>`); return; }
+  if(!S.sb){ modal(`<h2>${L("Site sem conexão","Site offline")}</h2><p>${L("O banco de dados não está configurado. Confira o arquivo config.js.","The database is not configured. Check config.js.")}</p><div class="formbar"><button class="btn" data-close>${L("Fechar","Close")}</button></div>`); return; }
   const lab=(t,id,type,ph,ac)=>`<label style="display:grid;gap:6px;font-weight:500">${t}<input class="field" id="${id}" type="${type}" placeholder="${ph}" autocomplete="${ac}"></label>`;
-  const body = mode==="up" ? `<h2>Criar conta</h2><p>O nome de jogador aparece nas builds que você publicar.</p>
-      ${lab("Nome de jogador","aNick","text","ex.: ReiDoNada_BR","nickname")}${lab("E-mail","aMail","email","voce@email.com","email")}${lab("Senha","aPass","password","mínimo de 6 caracteres","new-password")}`
-    : mode==="nick" ? `<h2>Escolha seu nome de jogador</h2><p>Ele aparece nas builds que você publicar.</p>${lab("Nome de jogador","aNick","text","ex.: ReiDoNada_BR","nickname")}`
-    : `<h2>Entrar</h2>${lab("E-mail","aMail","email","voce@email.com","email")}${lab("Senha","aPass","password","sua senha","current-password")}`;
-  const alt = mode==="in" ? `<button type="button" class="btn ghost" id="aAlt">Criar conta</button>` : mode==="up" ? `<button type="button" class="btn ghost" id="aAlt">Já tenho conta</button>` : "";
+  const body = mode==="up" ? `<h2>${L("Criar conta","Sign up")}</h2><p>${L("O nome de jogador aparece nas builds que você publicar.","Your player name shows on the builds you publish.")}</p>
+      ${lab(L("Nome de jogador","Player name"),"aNick","text",L("ex.: ReiDoNada_BR","e.g. KingOfNothing"),"nickname")}${lab("E-mail","aMail","email",L("voce@email.com","you@email.com"),"email")}${lab(L("Senha","Password"),"aPass","password",L("mínimo de 6 caracteres","at least 6 characters"),"new-password")}`
+    : mode==="nick" ? `<h2>${L("Escolha seu nome de jogador","Choose your player name")}</h2><p>${L("Ele aparece nas builds que você publicar.","It shows on the builds you publish.")}</p>${lab(L("Nome de jogador","Player name"),"aNick","text",L("ex.: ReiDoNada_BR","e.g. KingOfNothing"),"nickname")}`
+    : `<h2>${L("Entrar","Sign in")}</h2>${lab("E-mail","aMail","email",L("voce@email.com","you@email.com"),"email")}${lab(L("Senha","Password"),"aPass","password",L("sua senha","your password"),"current-password")}`;
+  const alt = mode==="in" ? `<button type="button" class="btn ghost" id="aAlt">${L("Criar conta","Sign up")}</button>` : mode==="up" ? `<button type="button" class="btn ghost" id="aAlt">${L("Já tenho conta","I have an account")}</button>` : "";
   modal(`<form id="aForm" style="display:grid;gap:14px" novalidate>${body}<div class="err" id="aErr" hidden></div>
-    <div class="formbar">${alt}<span style="flex:1"></span><button type="button" class="btn ghost" data-close>Cancelar</button><button class="btn primary" id="aGo">${mode==="in"?"Entrar":mode==="up"?"Criar conta":"Salvar"}</button></div></form>`);
+    <div class="formbar">${alt}<span style="flex:1"></span><button type="button" class="btn ghost" data-close>${L("Cancelar","Cancel")}</button><button class="btn primary" id="aGo">${mode==="in"?L("Entrar","Sign in"):mode==="up"?L("Criar conta","Sign up"):L("Salvar","Save")}</button></div></form>`);
   const alt2=$("#aAlt"); if(alt2) alt2.onclick=()=>authModal(mode==="in"?"up":"in");
   const f=$("#aForm"); const first=f.querySelector("input"); first&&first.focus();
   const err=t=>{ const e=$("#aErr"); e.textContent=t; e.hidden=false; };
   f.onsubmit=async ev=>{
     ev.preventDefault();
     const nick=($("#aNick")||{}).value?.trim(), mail=($("#aMail")||{}).value?.trim(), pass=($("#aPass")||{}).value;
-    if(mode!=="in" && !NICK_RE.test(nick||"")) return err("Nome de jogador: 3 a 24 caracteres, sem símbolos especiais.");
-    if(mode!=="nick" && (!mail || !mail.includes("@"))) return err("Informe um e-mail válido.");
-    if(mode==="up" && (pass||"").length<6) return err("A senha precisa ter pelo menos 6 caracteres.");
+    if(mode!=="in" && !NICK_RE.test(nick||"")) return err(L("Nome de jogador: 3 a 24 caracteres, sem símbolos especiais.","Player name: 3 to 24 characters, no special symbols."));
+    if(mode!=="nick" && (!mail || !mail.includes("@"))) return err(L("Informe um e-mail válido.","Enter a valid e-mail."));
+    if(mode==="up" && (pass||"").length<6) return err(L("A senha precisa ter pelo menos 6 caracteres.","The password needs at least 6 characters."));
     $("#aGo").disabled=true;
     try{
       if(mode==="in"){
         const {error}=await S.sb.auth.signInWithPassword({email:mail,password:pass}); if(error) throw error;
-        closeModal(); toast("Bem-vindo de volta!");
+        closeModal(); toast(L("Bem-vindo de volta!","Welcome back!"));
       } else if(mode==="up"){
         const {data:taken}=await S.sb.from("profiles").select("id").ilike("nick",nick.replace(/[%_]/g,"\\$&")).maybeSingle();
         if(taken) throw {code:"23505"};
         const {data,error}=await S.sb.auth.signUp({email:mail,password:pass,options:{data:{nick},emailRedirectTo:location.origin+location.pathname}});
         if(error) throw error;
-        if(data.session){ closeModal(); toast("Conta criada. Bem-vindo, "+nick+"!"); }
-        else modal(`<h2>Confirme seu e-mail</h2><p>Enviamos um link para <strong>${esc(mail)}</strong>. Depois de confirmar, volte aqui e clique em Entrar.</p><div class="formbar"><button class="btn primary" data-close>Entendi</button></div>`);
+        if(data.session){ closeModal(); toast(L("Conta criada. Bem-vindo, ","Account created. Welcome, ")+nick+"!"); }
+        else modal(`<h2>${L("Confirme seu e-mail","Confirm your e-mail")}</h2><p>${L("Enviamos um link para","We sent a link to")} <strong>${esc(mail)}</strong>. ${L("Depois de confirmar, volte aqui e clique em Entrar.","After confirming, come back and click Sign in.")}</p><div class="formbar"><button class="btn primary" data-close>${L("Entendi","Got it")}</button></div>`);
       } else {
         const {error}=await S.sb.from("profiles").insert({id:S.me.id,nick}); if(error) throw error;
-        S.profile={nick}; closeModal(); render(); toast("Pronto, "+nick+"!");
+        S.profile={nick}; closeModal(); render(); toast(L("Pronto, ","Done, ")+nick+"!");
       }
     }catch(e){ err(authMsg(e)); const b=$("#aGo"); if(b) b.disabled=false; }
   };
 }
 function writeErr(e){
   const c=e && e.code;
-  if(c==="42501") return "Você não tem permissão para alterar isso.";
-  if(c==="23514") return "Algum campo está fora do formato aceito.";
-  if(e && /jwt|auth/i.test(e.message||"")) return "Sua sessão expirou. Entre de novo.";
-  return "Não foi possível salvar agora. Tente de novo em instantes.";
+  if(c==="42501") return L("Você não tem permissão para alterar isso.","You are not allowed to change this.");
+  if(c==="23514") return L("Algum campo está fora do formato aceito.","A field is in an invalid format.");
+  if(e && /jwt|auth/i.test(e.message||"")) return L("Sua sessão expirou. Entre de novo.","Your session expired. Sign in again.");
+  return L("Não foi possível salvar agora. Tente de novo em instantes.","Could not save now. Try again in a moment.");
 }
 
 /* ---------- Modal ---------- */
@@ -439,9 +513,14 @@ function go(view, key){
   render(); window.scrollTo(0,0);
 }
 $("#homeBtn").onclick=()=>go("home");
+document.querySelectorAll("[data-lang]").forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
 
 /* ---------- Render ---------- */
 function render(){
+  document.documentElement.lang = LANG==="en"?"en":"pt-BR";
+  document.querySelectorAll("[data-lang]").forEach(b=>b.setAttribute("aria-pressed", String(b.dataset.lang===LANG)));
+  $("#brandSub").textContent = L("builds de 9 Kings","9 Kings builds");
+  $("#homeBtn").setAttribute("aria-label", L("Ir para o ranking","Go to the ranking"));
   renderAuth();
   const app=$("#app");
   if(S.view==="build") return renderBuild(app);
@@ -453,43 +532,43 @@ function renderHome(app){
   const ready = S.loaded.builds;
   let list = allBuilds().slice();
   if(S.filterKing!=="all") list=list.filter(b=>b.king===S.filterKing);
-  if(S.q){ const q=S.q.toLowerCase(); list=list.filter(b=>(b.title+" "+(b.summary||"")+" "+(b.perks||[]).join(" ")+" "+authorName(b)).toLowerCase().includes(q)); }
+  if(S.q){ const q=S.q.toLowerCase(); list=list.filter(b=>(b.title+" "+(b.summary||"")+" "+(b.perks||[]).join(" ")+" "+(b.perks||[]).map(p=>PT_PERKS[p]||"").join(" ")+" "+authorName(b)).toLowerCase().includes(q)); }
   if(S.sort==="top") list.sort((a,b)=>b.t.score-a.t.score || (b.createdAt||0)-(a.createdAt||0));
   else list.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
   const total=allBuilds().length;
 
   app.innerHTML = `
   <section class="hero">
-    <div class="eyebrow">Ranking da comunidade</div>
-    <h1>As builds de 9 Kings que mais seguram a horda</h1>
+    <div class="eyebrow">${L("Ranking da comunidade","Community ranking")}</div>
+    <h1>${L("As builds de 9 Kings que mais seguram a horda","The 9 Kings builds that hold the horde best")}</h1>
   </section>
-  ${S.dbDown?`<div class="notice">Não foi possível carregar as builds agora. Recarregue a página em instantes.</div>`:""}
-  <section class="filters" aria-label="Filtros">
-    <div class="kings" role="group" aria-label="Filtrar por rei">
-      <button class="chip" data-k="all" aria-pressed="${S.filterKing==="all"}">Todos os reis</button>
-      ${KINGS.map(k=>`<button class="chip" style="--kc:${k.color}" data-k="${k.id}" aria-pressed="${S.filterKing===k.id}"><span class="dot"></span>${esc(k.name.replace("King of ","").replace("the ",""))}</button>`).join("")}
+  ${S.dbDown?`<div class="notice">${L("Não foi possível carregar as builds agora. Recarregue a página em instantes.","Could not load the builds right now. Reload the page in a moment.")}</div>`:""}
+  <section class="filters" aria-label="${L("Filtros","Filters")}">
+    <div class="kings" role="group" aria-label="${L("Filtrar por rei","Filter by king")}">
+      <button class="chip" data-k="all" aria-pressed="${S.filterKing==="all"}">${L("Todos os reis","All kings")}</button>
+      ${KINGS.map(k=>`<button class="chip" style="--kc:${k.color}" data-k="${k.id}" aria-pressed="${S.filterKing===k.id}"><span class="dot"></span>${esc(kingShort(k))}</button>`).join("")}
     </div>
     <div class="row2">
-      <input class="field search" id="q" type="search" placeholder="Buscar por título, perk ou autor" value="${esc(S.q)}" aria-label="Buscar builds">
-      <select class="field" id="sort" aria-label="Ordenar">
-        <option value="top" ${S.sort==="top"?"selected":""}>Mais bem avaliadas</option>
-        <option value="new" ${S.sort==="new"?"selected":""}>Mais recentes</option>
+      <input class="field search" id="q" type="search" placeholder="${L("Buscar por título, perk ou autor","Search by title, perk or author")}" value="${esc(S.q)}" aria-label="${L("Buscar builds","Search builds")}">
+      <select class="field" id="sort" aria-label="${L("Ordenar","Sort")}">
+        <option value="top" ${S.sort==="top"?"selected":""}>${L("Mais bem avaliadas","Top rated")}</option>
+        <option value="new" ${S.sort==="new"?"selected":""}>${L("Mais recentes","Newest")}</option>
       </select>
     </div>
   </section>
   <section class="list" aria-label="Builds">
-    <div class="lh"><span>#</span><span>Votos</span><span>Build</span><span>Rei</span><span>Autor</span></div>
-    ${!ready && !S.dbDown ? `<div class="empty">Carregando builds…</div>` :
+    <div class="lh"><span>#</span><span>${L("Votos","Votes")}</span><span>Build</span><span>${L("Rei","King")}</span><span>${L("Autor","Author")}</span></div>
+    ${!ready && !S.dbDown ? `<div class="empty">${L("Carregando builds…","Loading builds…")}</div>` :
       list.length ? list.map((b,i)=>{
         const k=KMAP[b.king];
         return `<button class="li ${i<3&&S.sort==="top"?"top":""}" data-key="${esc(b.key)}">
           <span class="rank">${i+1}</span>
           <span class="score ${b.t.score<0?"neg":""}"><span class="tri"></span><span class="num">${b.t.score}</span></span>
-          <span class="ttl"><b>${esc(b.title)}${b.example?'<span class="tag-ex">exemplo</span>':""}</b><span>${esc(b.summary||"")}</span></span>
-          <span class="kcol"><span class="kbadge" style="--kc:${k.color}"><i></i>${esc(k.name)}</span></span>
+          <span class="ttl"><b>${esc(b.title)}${b.example?`<span class="tag-ex">${L("exemplo","example")}</span>`:""}</b><span>${esc(b.summary||"")}</span></span>
+          <span class="kcol"><span class="kbadge" style="--kc:${k.color}"><i></i>${esc(kingName(k))}</span></span>
           <span class="meta">${esc(authorName(b))}<small>${fmtDate(b.updatedAt||b.createdAt)}</small></span>
         </button>`;}).join("")
-      : `<div class="empty">${total?"Nenhuma build com esses filtros.":"Nenhuma build publicada ainda."} ${loggedIn()?`<br><br><button class="btn primary" id="emptyNew">Publicar a primeira</button>`:""}</div>`}
+      : `<div class="empty">${total?L("Nenhuma build com esses filtros.","No builds match these filters."):L("Nenhuma build publicada ainda.","No builds published yet.")} ${loggedIn()?`<br><br><button class="btn primary" id="emptyNew">${L("Publicar a primeira","Publish the first one")}</button>`:""}</div>`}
   </section>`;
 
   app.querySelectorAll(".chip[data-k]").forEach(c=>c.onclick=()=>{ S.filterKing=c.dataset.k; render(); });
@@ -507,10 +586,10 @@ function gridHTML(layout, interactive){
     const ench=(c&&c.ench)||[], tot=enchTotal(c);
     const cls=`cell ${name?"full":""} ${tot?"enchanted":""} ${i===CENTER?"center":""} ${interactive&&S.selCell===i?"sel":""}`;
     const gems = tot?`<span class="ench" aria-hidden="true">${ench.slice(0,3).map(e=>`<i style="--ec:${kcol(e.card)}"></i>`).join("")}<b>×${tot}</b></span>`:"";
-    const tip = name?name+(tot?" + "+ench.map(e=>e.card+" ×"+(e.n||1)).join(", "):""):"";
-    const inner = name?`${gems}<span>${esc(name)}</span>${c.lv?`<span class="lv">Nv${esc(c.lv)}</span>`:""}`:(i===CENTER?"<span>Base</span>":"");
+    const tip = name?cardName(name)+(tot?" + "+ench.map(e=>cardName(e.card)+" ×"+(e.n||1)).join(", "):""):"";
+    const inner = name?`${gems}<span>${esc(cardName(name))}</span>${c.lv?`<span class="lv">${L("Nv","Lv")}${esc(c.lv)}</span>`:""}`:(i===CENTER?"<span>Base</span>":"");
     cells.push(interactive
-      ? `<button type="button" class="${cls}" style="--kc:${col}" data-cell="${i}" title="${esc(tip)}" aria-label="Casa ${i+1}${name?": "+esc(tip):" vazia"}">${inner}</button>`
+      ? `<button type="button" class="${cls}" style="--kc:${col}" data-cell="${i}" title="${esc(tip)}" aria-label="${L("Casa","Slot")} ${i+1}${name?": "+esc(tip):L(" vazia"," empty")}">${inner}</button>`
       : `<div class="${cls}" style="--kc:${col}" title="${esc(tip)}">${inner}</div>`);
   }
   return `<div class="kgrid">${cells.join("")}</div>`;
@@ -519,16 +598,16 @@ function gridHTML(layout, interactive){
 function enchListHTML(layout){
   const rows=(layout||[]).map((c,i)=>({c,i})).filter(x=>x.c && enchTotal(x.c));
   if(!rows.length) return "";
-  return `<div class="enchlist"><h3>Encantamentos</h3>${rows.map(({c,i})=>`
-    <div class="erow"><span class="etroop" style="--kc:${kcol(c.card)}"><i></i>${esc(c.card)} <small>casa ${i+1}</small></span>
-      <span class="echips">${c.ench.map(e=>`<span class="echip" style="--ec:${kcol(e.card)}"><i></i>${esc(e.card)} <b>×${e.n||1}</b></span>`).join("")}</span></div>`).join("")}</div>`;
+  return `<div class="enchlist"><h3>${L("Encantamentos","Enchantments")}</h3>${rows.map(({c,i})=>`
+    <div class="erow"><span class="etroop" style="--kc:${kcol(c.card)}"><i></i>${esc(cardName(c.card))} <small>${L("casa","slot")} ${i+1}</small></span>
+      <span class="echips">${c.ench.map(e=>`<span class="echip" style="--ec:${kcol(e.card)}"><i></i>${esc(cardName(e.card))} <b>×${e.n||1}</b></span>`).join("")}</span></div>`).join("")}</div>`;
 }
 
 function renderBuild(app){
   const b=allBuilds().find(x=>x.key===S.buildKey);
   if(!b){
-    app.innerHTML=`<button class="back" id="bk">← Voltar ao ranking</button>
-      <div class="empty">${S.loaded.builds?"Essa build não existe mais ou foi removida.":"Carregando build…"}</div>`;
+    app.innerHTML=`<button class="back" id="bk">← ${L("Voltar ao ranking","Back to ranking")}</button>
+      <div class="empty">${S.loaded.builds?L("Essa build não existe mais ou foi removida.","This build no longer exists."):L("Carregando build…","Loading build…")}</div>`;
     $("#bk").onclick=()=>go("home"); return;
   }
   const k=KMAP[b.king], t=tally(b.key), mv=myVote(b.key);
@@ -537,43 +616,43 @@ function renderBuild(app){
   if(S.viewKey!==b.key){ S.viewKey=b.key; S.viewStage=b.stages.length-1; }
   const vi=Math.min(S.viewStage,b.stages.length-1), st=b.stages[vi];
   app.innerHTML=`
-  <button class="back" id="bk">← Voltar ao ranking</button>
+  <button class="back" id="bk">← ${L("Voltar ao ranking","Back to ranking")}</button>
   <header class="bhead">
     <div>
-      <div class="eyebrow">Build · ${esc(k.pt)}</div>
-      <h1>${esc(b.title)}${b.example?'<span class="tag-ex">exemplo</span>':""}</h1>
+      <div class="eyebrow">Build · ${esc(kingName(k))}</div>
+      <h1>${esc(b.title)}${b.example?`<span class="tag-ex">${L("exemplo","example")}</span>`:""}</h1>
       <div class="bsub">
-        <span class="kbadge" style="--kc:${k.color}"><i></i>${esc(k.name)}</span>
-        <span>por <strong style="color:var(--ink)">${esc(authorName(b))}</strong></span>
-        ${b.patch?`<span>Versão ${esc(b.patch)}</span>`:""}
-        <span>Atualizada em ${fmtDate(b.updatedAt||b.createdAt)}</span>
+        <span class="kbadge" style="--kc:${k.color}"><i></i>${esc(kingName(k))}</span>
+        <span>${L("por","by")} <strong style="color:var(--ink)">${esc(authorName(b))}</strong></span>
+        ${b.patch?`<span>${L("Versão","Version")} ${esc(b.patch)}</span>`:""}
+        <span>${L("Atualizada em","Updated")} ${fmtDate(b.updatedAt||b.createdAt)}</span>
       </div>
     </div>
-    <div class="voter" aria-label="Avaliação">
-      <button class="up" id="vUp" aria-pressed="${mv===1}" aria-label="Votar a favor"><svg width="14" height="10" viewBox="0 0 14 10"><path d="M7 0l7 10H0z" fill="currentColor"/></svg></button>
+    <div class="voter" aria-label="${L("Avaliação","Rating")}">
+      <button class="up" id="vUp" aria-pressed="${mv===1}" aria-label="${L("Votar a favor","Upvote")}"><svg width="14" height="10" viewBox="0 0 14 10"><path d="M7 0l7 10H0z" fill="currentColor"/></svg></button>
       <span class="num">${t.score}</span>
-      <button class="down" id="vDown" aria-pressed="${mv===-1}" aria-label="Votar contra"><svg width="14" height="10" viewBox="0 0 14 10"><path d="M7 10L0 0h14z" fill="currentColor"/></svg></button>
+      <button class="down" id="vDown" aria-pressed="${mv===-1}" aria-label="${L("Votar contra","Downvote")}"><svg width="14" height="10" viewBox="0 0 14 10"><path d="M7 10L0 0h14z" fill="currentColor"/></svg></button>
       <small>${t.up} ▲ · ${t.down} ▼</small>
     </div>
   </header>
   <div class="bgrid">
     <div>
       ${b.summary?`<section class="sec"><p class="summary">${esc(b.summary)}</p></section>`:""}
-      <section class="sec"><h2>Estratégia</h2>
-        <div class="guide">${paras.length?paras.map(p=>`<p>${esc(p)}</p>`).join(""):`<p style="color:var(--ink-3)">O autor ainda não escreveu o guia.</p>`}</div>
+      <section class="sec"><h2>${L("Estratégia","Strategy")}</h2>
+        <div class="guide">${paras.length?guideHTML(b.guide):`<p style="color:var(--ink-3)">${L("O autor ainda não escreveu o guia.","The author has not written a guide yet.")}</p>`}</div>
       </section>
     </div>
     <aside class="side">
-      <section class="sec"><h2>Reino${st.year?` <span class="yearnow">· ano ${st.year}</span>`:""}</h2>
-        ${b.stages.length>1?`<div class="years" role="tablist" aria-label="Reino por ano">${b.stages.map((x,i)=>`<button type="button" class="yeartab" role="tab" data-vy="${i}" aria-selected="${i===vi}">${esc(yearLabel(x))}</button>`).join("")}</div>`:""}
+      <section class="sec"><h2>${L("Reino","Kingdom")}${st.year?` <span class="yearnow">· ${L("ano","year")} ${st.year}</span>`:""}</h2>
+        ${b.stages.length>1?`<div class="years" role="tablist" aria-label="${L("Reino por ano","Kingdom by year")}">${b.stages.map((x,i)=>`<button type="button" class="yeartab" role="tab" data-vy="${i}" aria-selected="${i===vi}">${esc(yearLabel(x))}</button>`).join("")}</div>`:""}
         ${gridHTML(st.cells,false)}
-        <div class="legend">A casa dourada é a base do reino. As cores indicam o rei de origem de cada carta. Os losangos no canto mostram os encantamentos aplicados na tropa.</div>
+        <div class="legend">${L("A casa dourada é a base do reino. As cores indicam o rei de origem de cada carta. Os losangos no canto mostram os encantamentos aplicados na tropa.","The gold slot is the kingdom base. Colors show each card’s king of origin. The diamonds in the corner show the enchantments on a troop.")}</div>
         ${enchListHTML(st.cells)}</section>
       <section class="box sec" style="margin:0"><h2>Perks</h2>
-        ${(b.perks||[]).length?`<div class="perks">${b.perks.map(p=>`<span class="perk">${esc(p)}</span>`).join("")}</div>`:`<span style="color:var(--ink-3)">Nenhum perk informado.</span>`}
-        ${(b.tags||[]).length?`<h2 style="margin-top:8px">Estilo</h2><div class="tags">${b.tags.map(x=>`<span class="tag">${esc(x)}</span>`).join("")}</div>`:""}
+        ${(b.perks||[]).length?`<div class="perks">${b.perks.map(p=>`<span class="perk">${esc(perkName(p))}</span>`).join("")}</div>`:`<span style="color:var(--ink-3)">${L("Nenhum perk informado.","No perks listed.")}</span>`}
+        ${(b.tags||[]).length?`<h2 style="margin-top:8px">${L("Estilo","Style")}</h2><div class="tags">${b.tags.map(x=>`<span class="tag">${esc(styleName(x))}</span>`).join("")}</div>`:""}
       </section>
-      ${mine?`<section class="owner-actions" id="oa"><button class="btn" id="edBtn">Editar build</button><button class="btn danger" id="delBtn">Excluir</button></section>`:""}
+      ${mine?`<section class="owner-actions" id="oa"><button class="btn" id="edBtn">${L("Editar build","Edit build")}</button><button class="btn danger" id="delBtn">${L("Excluir","Delete")}</button></section>`:""}
     </aside>
   </div>`;
   $("#bk").onclick=()=>go("home");
@@ -583,10 +662,10 @@ function renderBuild(app){
   if(mine){
     $("#edBtn").onclick=()=>openEditor(b);
     $("#delBtn").onclick=()=>{
-      $("#oa").innerHTML=`<span style="color:var(--ink-2)">Excluir de vez?</span><button class="btn danger" id="delYes">Sim, excluir</button><button class="btn ghost" id="delNo">Cancelar</button>`;
+      $("#oa").innerHTML=`<span style="color:var(--ink-2)">${L("Excluir de vez?","Delete for good?")}</span><button class="btn danger" id="delYes">${L("Sim, excluir","Yes, delete")}</button><button class="btn ghost" id="delNo">${L("Cancelar","Cancel")}</button>`;
       $("#delNo").onclick=render;
       $("#delYes").onclick=async()=>{
-        try{ await deleteBuild(b.id); toast("Build excluída."); go("home"); }
+        try{ await deleteBuild(b.id); toast(L("Build excluída.","Build deleted.")); go("home"); }
         catch(e){ toast(writeErr(e)); render(); }
       };
     };
@@ -636,65 +715,72 @@ function renderEditor(app){
   const sel=d.layout[S.selCell];
   const order=[k, ...KINGS.filter(x=>x.id!==k.id)];
   const selTroop = sel && CARD_TYPE[sel.card]==="troop";
-  const match = c=>!S.pq||c.toLowerCase().includes(S.pq.toLowerCase());
+  const match = c=>!S.pq||(c+" "+(PT_CARDS[c]||"")).toLowerCase().includes(S.pq.toLowerCase());
   app.innerHTML=`
-  <button class="back" id="bk">← ${d.id?"Voltar para a build":"Voltar ao ranking"}</button>
-  <h1 style="font-size:32px">${d.id?"Editar build":"Nova build"}</h1>
+  <button class="back" id="bk">← ${d.id?L("Voltar para a build","Back to the build"):L("Voltar ao ranking","Back to ranking")}</button>
+  <h1 style="font-size:32px">${d.id?L("Editar build","Edit build"):L("Nova build","New build")}</h1>
   <form class="form" id="ef" novalidate>
-    <label>Título <input class="field" id="fTitle" maxlength="80" value="${esc(d.title)}" placeholder="ex.: Muralha de Balistas com juros do Vault"></label>
+    <label>${L("Título","Title")} <input class="field" id="fTitle" maxlength="80" value="${esc(d.title)}" placeholder="${L("ex.: Muralha de Balistas com juros do Vault","e.g. Ballista wall with Vault interest")}"></label>
     <div class="two">
-      <label>Rei <select class="field" id="fKing">${KINGS.map(x=>`<option value="${x.id}" ${x.id===d.king?"selected":""}>${esc(x.name)} (${esc(x.pt)})</option>`).join("")}</select></label>
-      <label>Versão do jogo <small>opcional</small><input class="field" id="fPatch" maxlength="24" value="${esc(d.patch)}" placeholder="ex.: 0.9.4"></label>
+      <label>${L("Rei","King")} <select class="field" id="fKing">${KINGS.map(x=>`<option value="${x.id}" ${x.id===d.king?"selected":""}>${esc(kingName(x))}</option>`).join("")}</select></label>
+      <label>${L("Versão do jogo","Game version")} <small>${L("opcional","optional")}</small><input class="field" id="fPatch" maxlength="24" value="${esc(d.patch)}" placeholder="${L("ex.: 0.9.4","e.g. 0.9.4")}"></label>
     </div>
-    <label>Resumo <small>uma frase que aparece no ranking</small><input class="field" id="fSum" maxlength="140" value="${esc(d.summary)}" placeholder="O que a build faz e por que funciona"></label>
+    <label>${L("Resumo","Summary")} <small>${L("uma frase que aparece no ranking","one line shown in the ranking")}</small><input class="field" id="fSum" maxlength="140" value="${esc(d.summary)}" placeholder="${L("O que a build faz e por que funciona","What the build does and why it works")}"></label>
 
-    <div style="display:grid;gap:8px"><b>Perks de ${esc(k.name)}</b>
-      <div class="perks">${k.perks.map(p=>`<button type="button" class="chip" style="--kc:${k.color}" data-perk="${esc(p)}" aria-pressed="${d.perks.includes(p)}">${esc(p)}</button>`).join("")}</div></div>
+    <div style="display:grid;gap:8px"><b>${L("Perks de","Perks of")} ${esc(kingName(k))}</b>
+      <div class="perks">${k.perks.map(p=>`<button type="button" class="chip" style="--kc:${k.color}" data-perk="${esc(p)}" aria-pressed="${d.perks.includes(p)}">${esc(perkName(p))}</button>`).join("")}</div></div>
 
-    <div style="display:grid;gap:8px"><b>Estilo</b>
-      <div class="tags">${STYLES.map(s=>`<button type="button" class="chip" data-tag="${esc(s)}" aria-pressed="${d.tags.includes(s)}">${esc(s)}</button>`).join("")}</div></div>
+    <div style="display:grid;gap:8px"><b>${L("Estilo","Style")}</b>
+      <div class="tags">${STYLES.map(s=>`<button type="button" class="chip" data-tag="${esc(s)}" aria-pressed="${d.tags.includes(s)}">${esc(styleName(s))}</button>`).join("")}</div></div>
 
-    <div style="display:grid;gap:10px"><b>Reino (5×5)</b>
+    <div style="display:grid;gap:10px"><b>${L("Reino (5×5)","Kingdom (5×5)")}</b>
       <div class="yearbar">
-        <div class="years" role="tablist" aria-label="Anos da build">${d.stages.map((x,i)=>`<button type="button" class="yeartab" role="tab" data-sy="${i}" aria-selected="${i===S.stageIdx}">${esc(yearLabel(x))}</button>`).join("")}
-          <button type="button" class="yeartab add" id="addYear">+ Adicionar ano</button></div>
+        <div class="years" role="tablist" aria-label="${L("Anos da build","Build years")}">${d.stages.map((x,i)=>`<button type="button" class="yeartab" role="tab" data-sy="${i}" aria-selected="${i===S.stageIdx}">${esc(yearLabel(x))}</button>`).join("")}
+          <button type="button" class="yeartab add" id="addYear">+ ${L("Adicionar ano","Add year")}</button></div>
         <div class="yearctl">
-          <label>Ano deste reino <input class="field" id="fYear" type="number" min="1" max="99" inputmode="numeric" value="${d.stages[S.stageIdx].year??""}" placeholder="ex.: 12"></label>
-          ${d.stages.length>1?`<button type="button" class="btn ghost" id="delYear" style="padding:4px 10px">Remover ${esc(yearLabel(d.stages[S.stageIdx]))}</button>`:""}
-          <span class="legend">Um novo ano começa como cópia do reino selecionado.</span>
+          <label>${L("Ano deste reino","Year of this kingdom")} <input class="field" id="fYear" type="number" min="1" max="99" inputmode="numeric" value="${d.stages[S.stageIdx].year??""}" placeholder="${L("ex.: 12","e.g. 12")}"></label>
+          ${d.stages.length>1?`<button type="button" class="btn ghost" id="delYear" style="padding:4px 10px">${L("Remover","Remove")} ${esc(yearLabel(d.stages[S.stageIdx]))}</button>`:""}
+          <span class="legend">${L("Um novo ano começa como cópia do reino selecionado.","A new year starts as a copy of the selected kingdom.")}</span>
         </div>
       </div>
       <div class="editor-grid">
         <div style="display:grid;gap:10px">
           ${gridHTML(d.layout,true)}
-          <div class="legend">Arraste cartas da lista para o grid, ou arraste uma carta do grid para outra casa (troca de lugar). Também dá para clicar numa casa e depois na carta.</div>
-          <div class="cellctl">Casa ${S.selCell+1}${S.selCell===CENTER?" (base)":""}: <strong style="color:var(--ink)">${sel?esc(sel.card):"vazia"}</strong>${sel?` <small style="color:var(--ink-3)">${TYPE_PT[CARD_TYPE[sel.card]]||""}</small>`:""}
-            ${sel?`<label style="display:inline-flex;align-items:center;gap:6px;font-weight:400">Nível <select class="field" id="fLv" style="padding:4px 8px">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option ${sel.lv==n?"selected":""}>${n}</option>`).join("")}</select></label>
-            <button type="button" class="btn ghost" id="clr" style="padding:4px 10px">Limpar casa</button>`:""}
+          <div class="legend">${L("Arraste cartas da lista para o grid, ou arraste uma carta do grid para outra casa (troca de lugar). Também dá para clicar numa casa e depois na carta.","Drag cards from the list onto the grid, or drag a card to another slot to swap them. You can also click a slot and then a card.")}</div>
+          <div class="cellctl">${L("Casa","Slot")} ${S.selCell+1}${S.selCell===CENTER?" (base)":""}: <strong style="color:var(--ink)">${sel?esc(cardName(sel.card)):L("vazia","empty")}</strong>${sel?` <small style="color:var(--ink-3)">${typeName(CARD_TYPE[sel.card])||""}</small>`:""}
+            ${sel?`<label style="display:inline-flex;align-items:center;gap:6px;font-weight:400">${L("Nível","Level")} <select class="field" id="fLv" style="padding:4px 8px">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<option ${sel.lv==n?"selected":""}>${n}</option>`).join("")}</select></label>
+            <button type="button" class="btn ghost" id="clr" style="padding:4px 10px">${L("Limpar casa","Clear slot")}</button>`:""}
           </div>
-          ${selTroop?`<div class="enchpanel"><b>Encantamentos em ${esc(sel.card)}</b>
-            ${(sel.ench||[]).length?(sel.ench).map((e,j)=>`<div class="erow2"><span class="echip" style="--ec:${kcol(e.card)}"><i></i>${esc(e.card)}</span>
-              <span class="stepper"><button type="button" data-edec="${j}" aria-label="Remover uma camada de ${esc(e.card)}">−</button><b class="num">${e.n||1}</b><button type="button" data-einc="${j}" aria-label="Adicionar uma camada de ${esc(e.card)}">+</button></span></div>`).join("")
-            :`<span class="legend">Nenhum. Arraste um encantamento para cima desta tropa ou clique num deles na lista.</span>`}</div>`:""}
+          ${selTroop?`<div class="enchpanel"><b>${L("Encantamentos em","Enchantments on")} ${esc(cardName(sel.card))}</b>
+            ${(sel.ench||[]).length?(sel.ench).map((e,j)=>`<div class="erow2"><span class="echip" style="--ec:${kcol(e.card)}"><i></i>${esc(cardName(e.card))}</span>
+              <span class="stepper"><button type="button" data-edec="${j}" aria-label="${L("Remover uma camada de","Remove one layer of")} ${esc(cardName(e.card))}">−</button><b class="num">${e.n||1}</b><button type="button" data-einc="${j}" aria-label="${L("Adicionar uma camada de","Add one layer of")} ${esc(cardName(e.card))}">+</button></span></div>`).join("")
+            :`<span class="legend">${L("Nenhum. Arraste um encantamento para cima desta tropa ou clique num deles na lista.","None. Drag an enchantment onto this troop or click one in the list.")}</span>`}</div>`:""}
         </div>
         <div style="display:grid;gap:8px;align-content:start">
-          <input class="field" id="pq" placeholder="Filtrar cartas" aria-label="Filtrar cartas" value="${esc(S.pq||"")}">
+          <input class="field" id="pq" placeholder="${L("Filtrar cartas","Filter cards")}" aria-label="${L("Filtrar cartas","Filter cards")}" value="${esc(S.pq||"")}">
           <div class="palette">
-            ${(()=>{ const en=ALL_ENCH.filter(e=>match(e.card)); return en.length?`<div class="pgroup enchgroup"><h3>Encantamentos <small>vão por cima de uma tropa, acumulam camadas</small></h3><div class="pcards">${en.map(e=>`<button type="button" class="pcard penc" style="--kc:${e.king.color}" data-ench="${esc(e.card)}" ${selTroop?"":"aria-disabled=\"true\""}><i></i>${esc(e.card)}</button>`).join("")}</div></div>`:""; })()}
+            ${(()=>{ const en=ALL_ENCH.filter(e=>match(e.card)); return en.length?`<div class="pgroup enchgroup"><h3>${L("Encantamentos","Enchantments")} <small>${L("vão por cima de uma tropa, acumulam camadas","go on top of a troop and stack")}</small></h3><div class="pcards">${en.map(e=>`<button type="button" class="pcard penc" style="--kc:${e.king.color}" data-ench="${esc(e.card)}" ${selTroop?"":"aria-disabled=\"true\""}><i></i>${esc(cardName(e.card))}</button>`).join("")}</div></div>`:""; })()}
             ${[...order,SPECIAL].map(x=>{
               const cards=PLACEABLE.flatMap(t=>x.c[t]).filter(match);
-              return cards.length?`<div class="pgroup" style="--kc:${x.color}"><h3>${esc(x.name)}</h3><div class="pcards">${cards.map(c=>`<button type="button" class="pcard" data-card="${esc(c)}" title="${TYPE_PT[CARD_TYPE[c]]}">${esc(c)}<small>${TYPE_PT[CARD_TYPE[c]]}</small></button>`).join("")}</div></div>`:"";
+              return cards.length?`<div class="pgroup" style="--kc:${x.color}"><h3>${esc(kingName(x))}</h3><div class="pcards">${cards.map(c=>`<button type="button" class="pcard" data-card="${esc(c)}" title="${typeName(CARD_TYPE[c])}">${esc(cardName(c))}<small>${typeName(CARD_TYPE[c])}</small></button>`).join("")}</div></div>`:"";
             }).join("")}
           </div>
-          <div class="legend">Tomos não aparecem aqui porque são jogados uma vez e não ficam no reino. Cite-os na estratégia.</div>
+          <div class="legend">${L("Tomos não aparecem aqui porque são jogados uma vez e não ficam no reino. Cite-os na estratégia.","Tomes are not listed because they are played once and do not stay in the kingdom. Mention them in the strategy.")}</div>
         </div>
       </div>
     </div>
 
-    <label>Estratégia <small>ordem de compra, quando expandir, contra quais reis funciona. Separe parágrafos com uma linha em branco.</small>
+    <label>${L("Estratégia","Strategy")} <small>${L("ordem de compra, quando expandir, contra quais reis funciona. Separe parágrafos com uma linha em branco.","buy order, when to expand, which kings it beats. Separate paragraphs with a blank line.")}</small>
       <textarea class="field" id="fGuide" maxlength="6000">${esc(d.guide)}</textarea></label>
+    <div class="guidetools">
+      <input type="file" id="gFile" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+      <button type="button" class="btn" id="gImgBtn">+ ${L("Adicionar imagem","Add image")}</button>
+      <span class="legend" id="gImgMsg">${L("Ou cole uma imagem (Ctrl+V) direto no texto. A imagem entra onde está o cursor.","Or paste an image (Ctrl+V) into the text. It goes where the cursor is.")}</span>
+    </div>
+    ${(()=>{ const imgs=(d.guide||"").split("\n").map(l=>l.trim().match(IMG_RE)).filter(m=>m&&m[2].startsWith(imgBase()));
+      return imgs.length?`<div class="gthumbs">${imgs.map(m=>`<img src="${esc(m[2])}" alt="${esc(m[1])}">`).join("")}</div>`:""; })()}
     <div class="err" id="eErr" ${S.editErr?"":"hidden"}>${esc(S.editErr||"")}</div>
-    <div class="formbar"><button type="button" class="btn ghost" id="cancel">Cancelar</button><button type="submit" class="btn primary" id="saveBtn">${d.id?"Salvar alterações":"Publicar build"}</button></div>
+    <div class="formbar"><button type="button" class="btn ghost" id="cancel">${L("Cancelar","Cancel")}</button><button type="submit" class="btn primary" id="saveBtn">${d.id?L("Salvar alterações","Save changes"):L("Publicar build","Publish build")}</button></div>
   </form>`;
 
   const sync=()=>{ d.title=$("#fTitle").value; d.patch=$("#fPatch").value; d.summary=$("#fSum").value; d.guide=$("#fGuide").value; };
@@ -709,7 +795,7 @@ function renderEditor(app){
   const placeCard=(i,card)=>{ const cur=d.layout[i]; const keep=cur && CARD_TYPE[card]==="troop" && CARD_TYPE[cur.card]==="troop";
     d.layout[i]={card, lv:(cur&&cur.lv)||1, ench: keep?(cur.ench||[]):[]}; };
   const addEnch=(i,card)=>{ const cur=d.layout[i];
-    if(!cur || CARD_TYPE[cur.card]!=="troop"){ toast("Encantamentos só vão por cima de uma tropa."); return false; }
+    if(!cur || CARD_TYPE[cur.card]!=="troop"){ toast(L("Encantamentos só vão por cima de uma tropa.","Enchantments only go on top of a troop.")); return false; }
     const list=cur.ench=(cur.ench||[]); const e=list.find(x=>x.card===card); if(e) e.n=(e.n||1)+1; else list.push({card,n:1}); return true; };
   const moveCell=(from,to)=>{ if(from===to) return; const a=d.layout[from]; d.layout[from]=d.layout[to]; d.layout[to]=a; };
 
@@ -726,7 +812,7 @@ function renderEditor(app){
     if(ev.button>0) return;
     if(!src.dataset.cell && ev.pointerType==="touch") return; // palette scrolls on touch; tap to place instead
     const x0=ev.clientX, y0=ev.clientY; let ghost=null, over=null;
-    const label = src.dataset.card||src.dataset.ench||(d.layout[+src.dataset.cell]||{}).card;
+    const label = cardName(src.dataset.card||src.dataset.ench||(d.layout[+src.dataset.cell]||{}).card||"");
     if(!label) return;
     const col = src.dataset.ench?kcol(src.dataset.ench):kcol(label);
     const move=e=>{
@@ -763,20 +849,36 @@ function renderEditor(app){
     S.stageIdx=d.stages.length-1; rerender(); };
   const fy=$("#fYear"); fy.oninput=()=>{ const v=parseInt(fy.value,10); d.stages[S.stageIdx].year = v>=1&&v<=99 ? v : null; }; fy.onchange=()=>rerender();
   const dy=$("#delYear"); if(dy) dy.onclick=()=>{ d.stages.splice(S.stageIdx,1); S.stageIdx=Math.max(0,S.stageIdx-1); rerender(); };
+  const ta=$("#fGuide"), gMsg=$("#gImgMsg");
+  const insertImage=async file=>{
+    const pos=ta.selectionStart??ta.value.length; sync();
+    gMsg.textContent=L("Enviando imagem…","Uploading image…"); $("#gImgBtn").disabled=true;
+    try{
+      const url=await uploadGuideImage(file);
+      const before=d.guide.slice(0,pos), after=d.guide.slice(pos);
+      const pre=before && !before.endsWith("\n\n") ? (before.endsWith("\n")?"\n":"\n\n") : "";
+      ta.value=before+pre+`![](${url})`+"\n\n"+after.replace(/^\n+/,"");
+      rerender(); toast(L("Imagem adicionada.","Image added."));
+    }catch(err){ gMsg.textContent=err.message; $("#gImgBtn").disabled=false; }
+  };
+  $("#gImgBtn").onclick=()=>$("#gFile").click();
+  $("#gFile").onchange=e=>{ const f=e.target.files&&e.target.files[0]; if(f) insertImage(f); };
+  ta.addEventListener("paste",e=>{ const it=[...(e.clipboardData?.items||[])].find(x=>x.kind==="file"&&x.type.startsWith("image/"));
+    if(it){ e.preventDefault(); insertImage(it.getAsFile()); } });
   $("#ef").onsubmit=async e=>{
     e.preventDefault(); sync();
-    if(d.title.trim().length<4){ S.editErr="Dê um título com pelo menos 4 caracteres."; return rerender(); }
-    if(d.stages.some(x=>!x.cells.some(Boolean))){ S.editErr="Todo ano precisa de pelo menos uma carta no reino. Remova os anos vazios."; return rerender(); }
+    if(d.title.trim().length<4){ S.editErr=L("Dê um título com pelo menos 4 caracteres.","Use a title with at least 4 characters."); return rerender(); }
+    if(d.stages.some(x=>!x.cells.some(Boolean))){ S.editErr=L("Todo ano precisa de pelo menos uma carta no reino. Remova os anos vazios.","Every year needs at least one card. Remove empty years."); return rerender(); }
     const ys=d.stages.map(x=>x.year).filter(Boolean);
-    if(d.stages.length>1 && ys.length!==d.stages.length){ S.editErr="Informe o número do ano em cada reino."; return rerender(); }
-    if(new Set(ys).size!==ys.length){ S.editErr="Há dois reinos com o mesmo ano."; return rerender(); }
+    if(d.stages.length>1 && ys.length!==d.stages.length){ S.editErr=L("Informe o número do ano em cada reino.","Enter the year number for each kingdom."); return rerender(); }
+    if(new Set(ys).size!==ys.length){ S.editErr=L("Há dois reinos com o mesmo ano.","Two kingdoms have the same year."); return rerender(); }
     $("#saveBtn").disabled=true;
     const rec={title:d.title.trim(),king:d.king,patch:d.patch.trim(),summary:d.summary.trim(),guide:d.guide.trim(),
       perks:d.perks,tags:d.tags,layout:{stages:[...d.stages].sort((a,b)=>(a.year||0)-(b.year||0)).map(x=>({year:x.year||null,
         cells:x.cells.map(c=>c?{card:c.card,lv:c.lv||1,ench:(CARD_TYPE[c.card]==="troop"?(c.ench||[]):[]).map(e=>({card:e.card,n:e.n||1}))}:null)}))}};
     try{
       const newId=await saveBuild(d.id, rec);
-      S.draft=null; S.editErr=""; toast(d.id?"Build atualizada.":"Build publicada!"); go("build", newId);
+      S.draft=null; S.editErr=""; toast(d.id?L("Build atualizada.","Build updated."):L("Build publicada!","Build published!")); go("build", newId);
     }catch(err){ S.editErr=writeErr(err); rerender(); }
   };
 }
